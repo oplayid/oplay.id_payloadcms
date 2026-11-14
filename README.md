@@ -1,67 +1,96 @@
-# Payload Blank Template
+# OPLAY.ID
 
-This template comes configured with the bare minimum to get started on anything you need.
+Platform website builder multi-tenant di atas Payload CMS 3 + Next.js 16.
+Satu tenant = satu situs. Situs individu memakai subpath, sedangkan klien
+korporasi dapat memakai custom domain.
 
-## Quick start
+## Aturan URL
 
-This template can be deployed directly from our Cloud hosting and it will setup MongoDB and cloud S3 object storage for media.
+| Jenis | Contoh | Cara akses |
+| --- | --- | --- |
+| Platform | `oplay.id`, `oplay.id/profil` | Root domain |
+| Individu | `oplay.id/faishal`, `oplay.id/faishal/profil` | Subpath `/<handle>` |
+| Korporasi | `ylbhsikap.or.id`, `ylbhsikap.or.id/profil` | Custom domain |
+| Subdomain platform | `apps.oplay.id` | Dikelola superadmin |
 
-## Quick Start - local setup
+- Bahasa default `id` tidak memakai prefix (`/`, `/profil`).
+- Bahasa `en` memakai prefix (`/en`, `/en/profil`).
+- Prefix `www.` dan port diabaikan saat mencocokkan host.
+- Host yang tidak dikenal akan menghasilkan 404, bukan fallback ke platform.
 
-To spin up this template locally, follow these steps:
+## Model data
 
-### Clone
+- **Tenants** — `slug` (handle), `type` (`platform|individual|corporate`),
+  `status`, `hosts[]` (host, kind, verified, isPrimary), branding, SEO.
+  Field `domain` lama disimpan tersembunyi untuk migrasi.
+- **Pages** — halaman per tenant dengan `slug`, `parent` (nested docs),
+  `breadcrumbs`, blok kanvas, tema, dan SEO. Publik hanya bisa membaca
+  halaman `published`.
+- **Users** — `role` (`member|superadmin`) + daftar tenant yang di-assign.
+  Hanya superadmin yang dapat mengubah slug/tipe/status/host tenant.
+- **Media** — file upload, discope per tenant oleh plugin multi-tenant.
+- **Themes** — preset tema (`default-theme`, `cyber-neon`, dll).
 
-After you click the `Deploy` button above, you'll want to have standalone copy of this repo on your machine. If you've already cloned this repo, skip to [Development](#development).
+## Live preview & draft
 
-### Development
+1. Admin membuka live preview dari koleksi Pages.
+2. URL preview: `/preview?path=...&tenant=...&locale=...`.
+3. Route tersebut mewajibkan login dan keanggotaan tenant, lalu mengaktifkan
+   `draftMode()` dan redirect ke halaman publik.
+4. Halaman publik mengecek ulang user. Cookie draft tanpa login tetap
+   menghasilkan 404, sehingga draft tidak pernah bocor ke publik.
 
-1. First [clone the repo](#clone) if you have not done so already
-2. `cd my-project && cp .env.example .env` to copy the example environment variables. You'll need to add the `MONGODB_URL` from your Cloud project to your `.env` if you want to use S3 storage and the MongoDB database that was created for you.
+## Environment
 
-3. `pnpm install && pnpm dev` to install dependencies and start the dev server
-4. open `http://localhost:3000` to open the app in your browser
+Salin `.env.example` menjadi `.env` lalu isi:
 
-That's it! Changes made in `./src` will be reflected in your app. Follow the on-screen instructions to login and create your first admin user. Then check out [Production](#production) once you're ready to build and serve your app, and [Deployment](#deployment) when you're ready to go live.
+| Variabel | Wajib | Keterangan |
+| --- | --- | --- |
+| `DATABASE_URL` | ya | MongoDB connection string |
+| `PAYLOAD_SECRET` | ya | Secret untuk JWT/session |
+| `NEXT_PUBLIC_SERVER_URL` | ya | `https://oplay.id` di produksi |
+| `PLATFORM_DOMAIN` | ya | `oplay.id` (tanpa protokol) |
+| `SUPERADMIN_EMAILS` | tidak | Daftar email superadmin, dipisah koma |
+| `PLATFORM_AUTO_SEED` | tidak | `false` untuk mematikan pembuatan tenant platform |
+| `MEDIA_DIR` | tidak | Lokasi upload media, default `media` |
+| `OIDC_*` | tidak | Login SSO PocketID |
 
-#### Docker (Optional)
+## Pengembangan
 
-If you prefer to use Docker for local development instead of a local MongoDB instance, the provided docker-compose.yml file can be used.
+```bash
+pnpm install
+pnpm dev            # http://localhost:3000
+pnpm lint
+pnpm exec tsc --noEmit
+pnpm build
+```
 
-To do so, follow these steps:
+Migrasi data lama (idempotent):
 
-- Modify the `MONGODB_URL` in your `.env` file to `mongodb://127.0.0.1/<dbname>`
-- Modify the `docker-compose.yml` file's `MONGODB_URL` to match the above `<dbname>`
-- Run `docker-compose up` to start the database, optionally pass `-d` to run in the background.
+```bash
+pnpm migrate:site
+```
 
-## How it works
+## Deploy (Coolify + GitHub Actions)
 
-The Payload config is tailored specifically to the needs of most websites. It is pre-configured in the following ways:
+1. Push ke `main` → `.github/workflows/docker.yml` membangun image dan
+   mendorongnya ke GHCR (`ghcr.io/<owner>/<repo>:latest`).
+2. Di Coolify buat resource Docker Image dari GHCR tersebut.
+3. Set environment variable sesuai tabel di atas.
+4. Mount volume persisten ke `/app/media` agar upload tidak hilang saat redeploy.
+5. Tambahkan domain `oplay.id` dan custom domain tenant di reverse proxy
+   Coolify (TLS ditangani otomatis). Custom domain tetap harus dicatat di
+   koleksi Tenants agar dikenali aplikasi.
+6. Setelah deploy pertama, jalankan migrasi dari mesin yang memiliki repo
+   (image runtime hanya berisi standalone build, tanpa CLI Payload):
 
-### Collections
+   ```bash
+   DATABASE_URL='mongodb://...' \
+   PAYLOAD_SECRET='...' \
+   NEXT_PUBLIC_SERVER_URL='https://oplay.id' \
+   PLATFORM_DOMAIN='oplay.id' \
+   pnpm migrate:site
+   ```
 
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
-
-- #### Users (Authentication)
-
-  Users are auth-enabled collections that have access to the admin panel.
-
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/3.x/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
-
-- #### Media
-
-  This is the uploads enabled collection. It features pre-configured sizes, focal point and manual resizing to help you manage your pictures.
-
-### Docker
-
-Alternatively, you can use [Docker](https://www.docker.com) to spin up this template locally. To do so, follow these steps:
-
-1. Follow [steps 1 and 2 from above](#development), the docker-compose file will automatically use the `.env` file in your project root
-1. Next run `docker-compose up`
-1. Follow [steps 4 and 5 from above](#development) to login and create your first admin user
-
-That's it! The Docker instance will help you get up and running quickly while also standardizing the development environment across your teams.
-
-## Questions
-
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+Build produksi memakai `output: 'standalone'`, sehingga image hanya berisi
+`server.js`, `.next/static`, `public/`, dan `media/`.

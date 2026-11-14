@@ -1,0 +1,131 @@
+@import "tailwindcss";
+@import "swiper/css";
+@import "swiper/css/effect-coverflow";
+@import "swiper/css/effect-cards";
+
+html {
+  scroll-behavior: smooth;
+}
+
+@theme {
+  /* --- 1. CORE SURFACE & BACKGROUND TOKENS --- */
+  --color-canvas-base: var(--theme-bg, #ffffff);
+  --color-canvas-surface: var(--theme-surface, #f8f9fa);
+  --color-canvas-elevated: var(--theme-elevated, #ffffff);
+
+  /* --- 2. BORDER & DIVIDER TOKENS --- */
+  --color-canvas-border: var(--theme-border, #e2e8f0);
+  --color-canvas-border-hover: var(--theme-border-hover, #cbd5e1);
+
+  /* --- 3. TYPOGRAPHY & TEXT TOKENS --- */
+  --color-canvas-text: var(--theme-text, #0f172a);
+  --color-canvas-muted: var(--theme-muted, #64748b);
+  --color-canvas-inverse: var(--theme-inverse, #ffffff);
+
+  /* --- 4. BRAND & INTERACTIVE TOKENS (CTA, Buttons, Links) --- */
+  --color-primary: var(--theme-primary, #2563eb);
+  --color-primary-hover: var(--theme-primary-hover, #1d4ed8);
+  --color-primary-text: var(--theme-primary-text, #ffffff);
+
+  --color-accent: var(--theme-accent, #f59e0b);
+  --color-accent-hover: var(--theme-accent-hover, #d97706);
+
+  /* --- 5. SYSTEM FEEDBACK TOKENS --- */
+  --color-success: var(--theme-success, #22c55e);
+  --color-warning: var(--theme-warning, #eab308);
+  --color-danger: var(--theme-danger, #ef4444);
+  --color-info: var(--theme-info, #3b82f6);
+
+  /* --- 6. TYPOGRAPHY FONT FAMILIES --- */
+  --font-heading: var(--theme-font-heading, "Syne", sans-serif);
+  --font-sub: var(--theme-font-sub, "Plus Jakarta Sans", sans-serif);
+  --font-body: var(--theme-font-body, "Inter", system-ui, sans-serif);
+  --font-sans: var(--font-body);
+
+  /* --- 7. SHAPE & SPATIAL TOKENS (Radius, Shadows) --- */
+  --radius-box: var(--theme-radius-box, 1rem);
+  --radius-btn: var(--theme-radius-btn, 0.75rem);
+  --shadow-custom: var(--theme-shadow, 0 10px 30px -10px rgba(0, 0, 0, 0.05));
+}
+
+/* Pengaturan Dasar Halaman dengan Variabel Font Dinamis & Fluid Typography */
+/* Ukuran font dasar (body) - Mengecilkan teks paragraf/umum di HP */
+body {
+  background-color: var(--color-canvas-base);
+  color: var(--color-canvas-text);
+  font-family: var(--theme-font-body, var(--font-body));
+  letter-spacing: -0.01em;
+  font-size: clamp(
+    0.75rem,
+    0.8vw + 0.4rem,
+    0.95rem
+  ); /* <-- Diubah dari 0.875rem ke 0.75rem (sekitar 12px di HP) */
+}
+
+/* Judul Utama (h1) - Mengecilkan ukuran h1 di HP */
+h1 {
+  font-family: var(--theme-font-heading, var(--font-heading));
+  font-size: clamp(
+    1.35rem,
+    3vw + 0.8rem,
+    2.5rem
+  ); /* <-- Diubah dari 1.75rem ke 1.35rem */
+}
+
+/* Sub-Judul (h2) - Mengecilkan ukuran h2 di HP */
+h2 {
+  font-family: var(--theme-font-heading, var(--font-heading));
+  font-size: clamp(
+    1.15rem,
+    2.5vw + 0.6rem,
+    2rem
+  ); /* <-- Diubah dari 1.5rem ke 1.15rem */
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--theme-font-heading, var(--font-heading));
+}
+
+/* Kustomisasi Scrollbar Dinamis */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-canvas-base);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-canvas-border);
+  border-radius: 3px;
+}
+
+@layer utilities {
+  /* Komponen Universal Card yang Beradaptasi dengan Token Tema */
+  .canvas-card {
+    background-color: var(--color-canvas-surface);
+    border: 1px solid var(--color-canvas-border);
+    border-radius: var(--radius-box);
+    box-shadow: var(--shadow-custom);
+    backdrop-filter: blur(16px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .canvas-card:hover {
+    border-color: var(--color-canvas-border-hover);
+    transform: translateY(-2px);
+  }
+
+  /* Komponen Universal Button yang Mengikuti Aksen Tema */
+  .canvas-btn-primary {
+    background-color: var(--color-primary);
+    color: var(--color-primary-text);
+    border-radius: var(--radius-btn);
+    transition: background-color 0.2s ease;
+  }
+
+  .canvas-btn-primary:hover {
+    background-color: var(--color-primary-hover);
+  }
+}
