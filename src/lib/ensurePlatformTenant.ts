@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 import type { Tenant } from '@/payload-types'
-import { getPlatformHost, getPlatformHosts, normalizeHost } from './urls'
+import { getPlatformHost, getPlatformHosts } from './urls'
 
 type TenantWithLegacyDomain = Tenant & { domain?: string | null }
 
@@ -48,6 +48,7 @@ export async function ensurePlatformTenant(payload: Payload): Promise<Tenant | n
       const data: Record<string, unknown> = {
         type: 'platform',
         status: 'active',
+        defaultLayoutMode: 'canvas',
       }
       if (!(candidate as { slug?: string | null }).slug) data.slug = slug
 
@@ -81,7 +82,7 @@ export async function ensurePlatformTenant(payload: Payload): Promise<Tenant | n
     return (await payload.update({
       collection: 'tenants',
       id: bySlug.docs[0].id,
-      data: { type: 'platform', status: 'active' },
+      data: { type: 'platform', status: 'active', defaultLayoutMode: 'canvas' },
       depth: 0,
       overrideAccess: true,
       context: { skipTenantValidation: true },
@@ -95,6 +96,7 @@ export async function ensurePlatformTenant(payload: Payload): Promise<Tenant | n
       slug,
       type: 'platform',
       status: 'active',
+      defaultLayoutMode: 'canvas',
       themePreset: 'default-theme',
       ...(platformHost
         ? {

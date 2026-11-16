@@ -3,11 +3,19 @@ import { APIError, type CollectionConfig } from 'payload'
 import {
   superAdminFieldOnly,
   superAdminOnly,
+  tenantScopeForUser,
+  userHasTenantAccess,
 } from '@/access'
+import type { User } from '@/payload-types'
 import { normalizeHost, isPlatformSubdomain } from '@/lib/urls'
+import { CACHE_TAGS, invalidateContent } from '@/lib/contentCache'
+import { footerField, navigationField } from './fields/siteChromeFields'
+import { applyTemplateToTenant } from '@/lib/applyTemplate'
+import { withTransaction } from '@/lib/transactions'
 import {
   RESERVED_SLUGS,
   TENANT_SLUG_REGEX,
+  isReservedPlatformHost,
   isValidTenantSlug,
   slugifyTenantName,
 } from '@/lib/site'
@@ -38,11 +46,73 @@ export const Tenants: CollectionConfig = {
   access: {
     // Frontend memakai Local API dengan overrideAccess, jadi publik tidak
     // membutuhkan akses REST ke daftar tenant.
-    read: ({ req }) => Boolean(req.user),
+    // Non-superadmin hanya boleh melihat/mengubah tenant miliknya sendiri.
+    read: ({ req }) => tenantScopeForUser(req.user as User | null),
     create: superAdminOnly,
     delete: superAdminOnly,
-    update: ({ req }) => Boolean(req.user),
+    update: ({ req }) => tenantScopeForUser(req.user as User | null),
   },
+  endpoints: [
+    {
+      // Menyalin template ke tenant: halaman + navbar/footer + tema.
+      // Dipakai tombol "Terapkan template" di panel admin.
+      path: '/:id/apply-template',
+      method: 'post',
+      handler: async (req) => {
+        const tenantID = String(req.routeParams?.id || '')
+        const user = req.user as User | null
+
+        if (!userHasTenantAccess(user, tenantID)) {
+          return Response.json(
+            { error: 'Anda tidak punya akses ke tenant ini.' },
+            { status: 403 },
+          )
+        }
+
+        let body: { templateId?: unknown; overwrite?: unknown } = {}
+        try {
+          const parsed = (await req.json?.()) as typeof body | undefined
+          if (parsed && typeof parsed === 'object') body = parsed
+        } catch {
+          return Response.json({ error: 'Body JSON tidak valid.' }, { status: 400 })
+        }
+
+        const templateID = typeof body.templateId === 'string' ? body.templateId : ''
+        if (!templateID) {
+          return Response.json({ error: 'templateId wajib diisi.' }, { status: 400 })
+        }
+
+        try {
+          // Semua halaman + pembaruan tenant dibuat dalam satu transaksi.
+          const result = await withTransaction(req, () =>
+            applyTemplateToTenant({
+              payload: req.payload,
+              tenantID,
+              templateID,
+              overwrite: body.overwrite === true,
+              req,
+            }),
+          )
+
+          return Response.json(result)
+        } catch (error) {
+          req.payload.logger.error(
+            `Gagal menerapkan template ${templateID} ke tenant ${tenantID}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          )
+
+          return Response.json(
+            {
+              error:
+                error instanceof Error ? error.message : 'Gagal menerapkan template.',
+            },
+            { status: 400 },
+          )
+        }
+      },
+    },
+  ],
   hooks: {
     beforeValidate: [
       async ({ data, originalDoc, operation, req, context }) => {
@@ -169,6 +239,15 @@ export const Tenants: CollectionConfig = {
             }
             if (entry.isPrimary) primaryCount += 1
 
+            // Platform tenant boleh memiliki host platform (oplay.id), tenant
+            // lain tidak boleh menempel ke host sistem.
+            if (effective.type !== 'platform' && isReservedPlatformHost(entry.host)) {
+              throw new APIError(
+                `Host "${entry.host}" adalah host sistem dan tidak boleh dipakai tenant.`,
+                400,
+              )
+            }
+
             const duplicateHost = await req.payload.find({
               collection: 'tenants',
               where: {
@@ -197,6 +276,38 @@ export const Tenants: CollectionConfig = {
         }
 
         return next
+      },
+    ],
+    afterChange: [
+      async () => {
+        // Host, handle, navbar/footer, dan code injection semuanya berasal dari
+        // dokumen tenant, jadi seluruh cache tenant dibuang.
+        await invalidateContent([CACHE_TAGS.tenants])
+      },
+    ],
+    afterDelete: [
+      async ({ id, req }) => {
+        await invalidateContent([
+          CACHE_TAGS.tenants,
+          CACHE_TAGS.pages,
+          CACHE_TAGS.redirects,
+        ])
+
+        // Redirect milik tenant ikut dibersihkan agar tidak menumpuk.
+        try {
+          await req.payload.delete({
+            collection: 'redirects',
+            where: { tenant: { equals: id } },
+            overrideAccess: true,
+            req,
+          })
+        } catch (error) {
+          req.payload.logger.error(
+            `Gagal menghapus redirect tenant ${id}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          )
+        }
       },
     ],
   },
@@ -311,6 +422,83 @@ export const Tenants: CollectionConfig = {
       ],
     },
     {
+      name: 'templateApplier',
+      type: 'ui',
+      admin: {
+        position: 'sidebar',
+        components: {
+          Field: '@/components/admin/ApplyTemplateField',
+        },
+      },
+    },
+    {
+      name: 'exposeSubpath',
+      type: 'checkbox',
+      defaultValue: true,
+      label: 'Tampilkan di oplay.id/<slug>',
+      access: {
+        create: superAdminFieldOnly,
+        update: superAdminFieldOnly,
+      },
+      admin: {
+        position: 'sidebar',
+        description:
+          'Aktif: situs juga dapat diakses lewat oplay.id/<slug>. Nonaktif: hanya lewat host/domain miliknya (mencegah konten klien bocor ke domain platform).',
+      },
+    },
+    {
+      name: 'defaultLayoutMode',
+      type: 'select',
+      defaultValue: 'inherit',
+      label: 'Layout default halaman',
+      options: [
+        { label: 'Ikuti layout situs (navbar/footer otomatis)', value: 'inherit' },
+        { label: 'Kanvas penuh (halaman atur sendiri)', value: 'canvas' },
+        { label: 'Polos (tanpa navbar/footer)', value: 'bare' },
+      ],
+      admin: {
+        position: 'sidebar',
+        description:
+          'Dipakai halaman yang tidak memilih layout sendiri. "Kanvas penuh" cocok untuk situs yang ingin navbar/footer di dalam blok halaman.',
+      },
+    },
+    navigationField,
+    footerField,
+    {
+      name: 'codeInjection',
+      type: 'group',
+      label: 'Code Injection (superadmin)',
+      admin: {
+        description:
+          'CSS/JS kustom untuk seluruh situs tenant ini (analytics, pixel, font kustom). Hanya superadmin yang dapat mengubah.',
+      },
+      fields: [
+        {
+          name: 'customCss',
+          type: 'code',
+          label: 'CSS kustom',
+          access: {
+            create: superAdminFieldOnly,
+            update: superAdminFieldOnly,
+          },
+          admin: { language: 'css' },
+        },
+        {
+          name: 'customJs',
+          type: 'code',
+          label: 'JavaScript kustom',
+          access: {
+            create: superAdminFieldOnly,
+            update: superAdminFieldOnly,
+          },
+          admin: {
+            language: 'javascript',
+            description: 'Dijalankan setelah halaman dimuat. Gunakan dengan hati-hati.',
+          },
+        },
+      ],
+    },
+    {
       name: 'favicon',
       type: 'text',
       label: 'URL Favicon',
@@ -348,7 +536,9 @@ export const Tenants: CollectionConfig = {
       name: 'domain',
       type: 'text',
       label: 'Domain (legacy)',
-      unique: true,
+      // Bukan unique: MongoDB memperlakukan field kosong sebagai null, sehingga
+      // unique index membuat tenant kedua gagal dibuat (E11000 domain_1).
+      index: true,
       access: {
         create: superAdminFieldOnly,
         update: superAdminFieldOnly,

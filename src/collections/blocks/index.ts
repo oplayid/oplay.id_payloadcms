@@ -43,6 +43,8 @@ import { comparisonSplitField } from './comparisonSplitField'
 import { liveStatusField } from './liveStatusField'
 import { galleryLightboxField } from './galleryLightboxField'
 import { accordionDirectoryField } from './accordionDirectoryField'
+import { advancedHtmlField } from './advancedHtmlField'
+import { articleListField } from './articleListField'
 
 /**
  * Peta kamus form manual untuk setiap tipe komponen di COMPONENT_REGISTRY.
@@ -76,6 +78,9 @@ const customFieldMap: Record<string, Block> = {
   ProfessionalCV: professionalCVField,
   DocumentFlip: documentFlipField,
 
+  // Konten
+  ArticleList: articleListField,
+
   // Preset
   FeatureMatrix: featureMatrixField,
   TestimonialCarousel: testimonialCarouselField,
@@ -91,6 +96,7 @@ const customFieldMap: Record<string, Block> = {
   LiveStatus: liveStatusField,
   GalleryLightbox: galleryLightboxField,
   AccordionDirectory: accordionDirectoryField,
+  AdvancedHTML: advancedHtmlField,
 }
 
 /**

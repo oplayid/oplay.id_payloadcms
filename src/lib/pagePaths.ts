@@ -38,16 +38,16 @@ function tenantBasePath(
  */
 export function buildPreviewURL({
   tenant,
-  page,
+  pagePath,
   locale,
   origin,
 }: {
   tenant: Partial<Tenant> & { slug?: string | null; type?: string | null }
-  page: Partial<Page> & { slug?: string | null }
+  /** Path konten relatif terhadap root site (mis. `/` atau `/artikel/foo`). */
+  pagePath: string
   locale: Locale
   origin: string
 }): string {
-  const pagePath = extractPagePath(page)
   const publicPath = localizePath(pagePath, tenantBasePath(tenant), locale)
   const preview = new URL('/preview', origin)
   preview.searchParams.set('path', publicPath)

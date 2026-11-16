@@ -9,7 +9,7 @@ const dirname = path.dirname(__filename)
 const nextConfig: NextConfig = {
   // Dibutuhkan oleh Dockerfile (Coolify) yang memakai .next/standalone.
   output: 'standalone',
-  allowedDevOrigins: ['192.168.1.6'],
+  allowedDevOrigins: ['umkm.oplay.id'],
   images: {
     localPatterns: [
       {

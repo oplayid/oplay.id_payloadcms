@@ -41,6 +41,8 @@ import ProfessionalCVBlock from '@/components/bio/ProfessionalCVBlock'
 import AnimatedPhotoBannerBlock from '@/components/bio/AnimatedPhotoBannerBlock'
 import AppleInteractiveShowcaseBlock from '@/components/bio/AppleInteractiveShowcaseBlock'
 import AppleVideoScrubBlock from '@/components/bio/AppleVideoScrubBlock'
+import AdvancedHTMLBlock from '@/components/blocks/AdvancedHTMLBlock'
+import ArticleListBlock from './blocks/ArticleListBlock'
 
 export type ComponentDefinition = {
   type: string
@@ -377,6 +379,27 @@ export const COMPONENT_REGISTRY: ComponentDefinition[] = [
     type: 'AppleVideoScrub',
     category: 'Visual & Gallery',
     component: AppleVideoScrubBlock,
+    variants: ['default'],
+  },
+
+  // --- KONTEN / ARTIKEL ---
+  {
+    type: 'ArticleList',
+    category: 'Content',
+    component: ArticleListBlock,
+    variants: [
+      'article-grid',
+      'article-list',
+      'article-featured',
+      'article-compact',
+    ],
+  },
+
+  // --- KEBEBASAN PENUH (KHUSUS SUPERADMIN) ---
+  {
+    type: 'AdvancedHTML',
+    category: 'Advanced',
+    component: AdvancedHTMLBlock,
     variants: ['default'],
   },
 ]

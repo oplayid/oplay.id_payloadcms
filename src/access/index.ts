@@ -46,6 +46,25 @@ export function userHasTenantAccess(
 
 export const superAdminOnly: Access = ({ req }) => isSuperAdmin(req.user as User | null)
 
+/**
+ * Query pembatas dokumen tenant: superadmin melihat semua, user biasa hanya
+ * tenant tempat ia terdaftar sebagai anggota.
+ */
+export function tenantScopeForUser(
+  user: User | null | undefined,
+): true | false | { id: { in: string[] } } {
+  if (!user) return false
+  if (isSuperAdmin(user)) return true
+
+  const ids = getUserTenantIDs(user)
+  if (ids.length === 0) return false
+
+  return { id: { in: ids } }
+}
+
+export const tenantScope: Access = ({ req }) =>
+  tenantScopeForUser(req.user as User | null)
+
 export const authenticated: Access = ({ req }) => Boolean(req.user)
 
 export const superAdminFieldOnly: FieldAccess = ({ req }) =>

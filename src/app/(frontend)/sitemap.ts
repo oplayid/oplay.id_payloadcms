@@ -10,6 +10,7 @@ import {
   getOriginFromHost,
 } from '@/lib/urls'
 import { extractPagePath } from '@/lib/pagePaths'
+import { ROUTABLE_COLLECTIONS } from '@/lib/routableCollections'
 import { findPlatformTenant, findTenantByHost, getTenantBasePath } from '@/lib/site'
 
 type SiteForSitemap = {
@@ -36,6 +37,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         and: [
           { type: { not_equals: 'platform' } },
           { status: { not_equals: 'suspended' } },
+          { exposeSubpath: { not_equals: false } },
         ],
       },
       limit: 500,
@@ -88,6 +90,53 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           },
         },
       })
+    }
+
+    // Konten routable (artikel, dan koleksi lain yang terdaftar).
+    for (const config of ROUTABLE_COLLECTIONS) {
+      const prefix = config.prefixes[0]
+      const docs = await payload.find({
+        collection: config.collection as never,
+        where: {
+          and: [
+            { tenant: { equals: site.tenant.id } },
+            { _status: { equals: 'published' } },
+          ],
+        },
+        limit: 5000,
+        depth: 0,
+        overrideAccess: true,
+      })
+
+      for (const doc of docs.docs as Array<Record<string, unknown>>) {
+        const slug = doc[config.slugField]
+        if (typeof slug !== 'string' || !slug) continue
+
+        const contentPath = `/${prefix}/${slug}`
+        const updatedAt = doc.updatedAt ? new Date(doc.updatedAt as string) : new Date()
+        const idURL = `${origin}${localizePath(contentPath, site.basePath, 'id')}`.replace(
+          /\/$/,
+          '',
+        )
+        const enURL = `${origin}${localizePath(contentPath, site.basePath, 'en')}`.replace(
+          /\/$/,
+          '',
+        )
+
+        entries.push({
+          url: idURL,
+          lastModified: updatedAt,
+          changeFrequency: 'monthly',
+          priority: 0.6,
+          alternates: {
+            languages: {
+              id: idURL,
+              en: enURL,
+              'x-default': idURL,
+            },
+          },
+        })
+      }
     }
   }
 

@@ -2,9 +2,11 @@
 import { APIError, type CollectionConfig } from 'payload'
 import { getDynamicBlocks } from './blocks'
 import { createParentField } from '@payloadcms/plugin-nested-docs'
-import { authenticated } from '@/access'
-import { buildPreviewURL } from '@/lib/pagePaths'
-import type { Page, Tenant } from '@/payload-types'
+import { authenticated, isSuperAdmin } from '@/access'
+import { CACHE_TAGS, invalidateContent } from '@/lib/contentCache'
+import { syncRedirectForPageChange } from '@/lib/pageRedirectSync'
+import { buildPreviewURL, extractPagePath } from '@/lib/pagePaths'
+import type { Page, Tenant, User } from '@/payload-types'
 import { getServerURL } from '@/lib/urls'
 
 export const Pages: CollectionConfig = {
@@ -30,7 +32,7 @@ export const Pages: CollectionConfig = {
 
         return buildPreviewURL({
           tenant,
-          page: (data || {}) as Page,
+          pagePath: extractPagePath((data || {}) as Page),
           locale: locale?.code === 'en' ? 'en' : 'id',
           origin: getServerURL(),
         })
@@ -54,6 +56,31 @@ export const Pages: CollectionConfig = {
   },
   hooks: {
     beforeValidate: [
+      // Blok AdvancedHTML mengeksekusi HTML/CSS/JS mentah. Hanya superadmin
+      // yang boleh memakainya agar tenant tidak bisa menyuntik kode sembarang.
+      // Dipisah dari validasi slug agar tidak bisa dilewati request parsial
+      // (mis. update tanpa mengirim field `slug`).
+      async ({ data, originalDoc, req, context }) => {
+        if (!data) return data
+        if (context?.skipAdvancedHtmlValidation) return data
+        if (isSuperAdmin(req.user as User | null)) return data
+
+        const blocks = Array.isArray(data.canvasBlocks)
+          ? data.canvasBlocks
+          : Array.isArray(originalDoc?.canvasBlocks)
+            ? originalDoc.canvasBlocks
+            : []
+
+        const usesRawHtml = blocks.some(
+          (block: { blockType?: string | null }) => block?.blockType === 'AdvancedHTML',
+        )
+
+        if (usesRawHtml) {
+          throw new APIError('Blok "Advanced HTML" hanya dapat dipakai oleh superadmin.', 403)
+        }
+
+        return data
+      },
       async ({ data, originalDoc, req, context }) => {
         if (!data) return data
         if (context?.skipSlugValidation) return data
@@ -97,6 +124,44 @@ export const Pages: CollectionConfig = {
         }
 
         return data
+      },
+    ],
+    afterChange: [
+      async ({ doc, previousDoc, operation, req }) => {
+        // Halaman memengaruhi lookup halaman, href navbar/footer (relasi page),
+        // redirect otomatis, dan sitemap. Buang cache halaman + chrome turunannya.
+        await invalidateContent([CACHE_TAGS.pages, CACHE_TAGS.redirects])
+
+        // Rename / pindah halaman -> simpan redirect path lama ke path baru.
+        // Memakai `req` yang sama supaya ikut transaksi penyimpanan halaman.
+        const tenantRef = (doc as Page).tenant
+        const tenantID =
+          tenantRef && typeof tenantRef === 'object' ? tenantRef.id : tenantRef
+
+        if (!tenantID) return
+
+        try {
+          await syncRedirectForPageChange({
+            payload: req.payload,
+            req,
+            previousDoc: operation === 'update' ? (previousDoc as Page) : null,
+            doc: doc as Page,
+            tenantID,
+          })
+        } catch (error) {
+          // Redirect adalah fitur kenyamanan; jangan sampai menggagalkan
+          // penyimpanan halaman.
+          req.payload.logger.error(
+            `Gagal menyimpan redirect untuk halaman ${doc.id ?? 'baru'}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          )
+        }
+      },
+    ],
+    afterDelete: [
+      async () => {
+        await invalidateContent([CACHE_TAGS.pages])
       },
     ],
   },
@@ -143,6 +208,21 @@ export const Pages: CollectionConfig = {
       relationTo: 'themes',
       label: 'Preset Tema',
       admin: { width: '50%' },
+    },
+    {
+      name: 'layoutMode',
+      type: 'select',
+      label: 'Layout Halaman',
+      options: [
+        { label: 'Ikuti layout situs (navbar/footer otomatis)', value: 'inherit' },
+        { label: 'Kanvas penuh (navbar/footer di dalam blok)', value: 'canvas' },
+        { label: 'Polos (tanpa navbar/footer)', value: 'bare' },
+      ],
+      admin: {
+        position: 'sidebar',
+        description:
+          'Kosongkan untuk mengikuti layout default tenant. Pilih "Kanvas penuh" jika halaman ini memakai blok Navbar/Footer sendiri.',
+      },
     },
     {
       name: 'canvasBlocks',

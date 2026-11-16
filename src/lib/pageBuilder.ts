@@ -16,10 +16,16 @@ import {
 } from './site'
 import { getProtocolForHost, localizePath, type Locale } from './urls'
 import { extractPagePath } from './pagePaths'
+import { getTenantChrome, type SiteChrome } from './siteChrome'
+import { CACHE_TAGS, cacheQuery } from './contentCache'
+
+export type LayoutMode = 'inherit' | 'canvas' | 'bare'
 
 export type PageLayoutData = {
   page: Page
   tenant: Tenant
+  /** ID tenant, dipakai blok yang perlu query konten tenant ini. */
+  tenantID: string
   site: SiteContext
   theme: Record<string, any>
   favicon: string
@@ -35,6 +41,10 @@ export type PageLayoutData = {
   isPreview: boolean
   basePath: string
   locale: Locale
+  /** Layout efektif: inherit (chrome situs), canvas, atau bare. */
+  layoutMode: LayoutMode
+  /** Navbar/footer/code injection milik tenant. */
+  chrome: SiteChrome
   /** Data yang dikonsumsi CanvasRenderer. */
   canvasBlocks: any[]
 }
@@ -61,7 +71,7 @@ function pathCandidates(path: string): string[] {
   return [normalized, `/home${normalized}`]
 }
 
-function faviconFromTenant(tenant: Tenant): string {
+export function faviconFromTenant(tenant: Tenant): string {
   const raw = (tenant as Tenant & { favicon?: unknown }).favicon
 
   if (typeof raw === 'string' && raw.trim()) return raw.trim()
@@ -73,28 +83,34 @@ function faviconFromTenant(tenant: Tenant): string {
   return '/favicon.ico'
 }
 
-async function findPageForSite({
-  site,
-  isPreview,
-}: {
-  site: SiteContext
+type PageLookupArgs = {
+  tenantID: string
+  isPlatformTenant: boolean
+  pagePath: string
+  locale: Locale
   isPreview: boolean
-}): Promise<PageWithMeta | null> {
+}
+
+async function queryPageForSite({
+  tenantID,
+  isPlatformTenant,
+  pagePath,
+  locale,
+  isPreview,
+}: PageLookupArgs): Promise<PageWithMeta | null> {
   const payload = await getPayload({ config })
-  const tenantID = site.tenant.id
-  const candidates = pathCandidates(site.pagePath)
-  const tenantFilter: Where =
-    site.tenant.type === 'platform'
-      ? {
-          or: [{ tenant: { equals: tenantID } }, { tenant: { exists: false } }],
-        }
-      : { tenant: { equals: tenantID } }
+  const candidates = pathCandidates(pagePath)
+  const tenantFilter: Where = isPlatformTenant
+    ? {
+        or: [{ tenant: { equals: tenantID } }, { tenant: { exists: false } }],
+      }
+    : { tenant: { equals: tenantID } }
 
   const statusFilter: Where = isPreview ? {} : { _status: { equals: 'published' } }
 
   const byBreadcrumb = await payload.find({
     collection: 'pages',
-    locale: site.locale,
+    locale,
     where: {
       and: [
         tenantFilter,
@@ -111,22 +127,23 @@ async function findPageForSite({
     overrideAccess: isPreview,
   })
 
-  const expectedPath = normalizePagePath(site.pagePath)
+  const expectedPath = normalizePagePath(pagePath)
   const byBreadcrumbExact = (byBreadcrumb.docs as PageWithMeta[]).find(
     (doc) => extractPagePath(doc) === expectedPath,
   )
   if (byBreadcrumbExact) return byBreadcrumbExact
 
   // Fallback untuk data yang breadcrumbs-nya belum terisi / belum di-resave.
-  const lastSegment = site.pageSegments[site.pageSegments.length - 1]
+  const normalizedPath = normalizePagePath(pagePath)
+  const lastSegment = normalizedPath === '/' ? null : normalizedPath.split('/').filter(Boolean).pop()
   const slugCandidates =
-    site.pagePath === '/'
+    pagePath === '/'
       ? ['home', 'beranda', 'index']
       : [lastSegment].filter((slug): slug is string => Boolean(slug))
 
   const bySlug = await payload.find({
     collection: 'pages',
-    locale: site.locale,
+    locale,
     where: {
       and: [tenantFilter, { slug: { in: slugCandidates } }, statusFilter],
     },
@@ -137,22 +154,58 @@ async function findPageForSite({
   })
 
   const exact = (bySlug.docs as PageWithMeta[]).find(
-    (doc) => extractPagePath(doc) === normalizePagePath(site.pagePath),
+    (doc) => extractPagePath(doc) === normalizePagePath(pagePath),
   )
 
   return exact || null
 }
 
-function buildCanonicalURLs({
+const cachedPageForSite = cacheQuery(
+  { key: 'page-for-site', tags: [CACHE_TAGS.pages] },
+  (tenantID: string, isPlatformTenant: boolean, pagePath: string, locale: Locale) =>
+    queryPageForSite({
+      tenantID,
+      isPlatformTenant,
+      pagePath,
+      locale,
+      isPreview: false,
+    }),
+)
+
+async function findPageForSite({
   site,
-  page,
+  isPreview,
+}: {
+  site: SiteContext
+  isPreview: boolean
+}): Promise<PageWithMeta | null> {
+  const isPlatformTenant = site.tenant.type === 'platform'
+
+  // Draft/preview tidak boleh memakai cache agar editor selalu melihat
+  // perubahan terakhir.
+  if (isPreview) {
+    return queryPageForSite({
+      tenantID: site.tenant.id,
+      isPlatformTenant,
+      pagePath: site.pagePath,
+      locale: site.locale,
+      isPreview: true,
+    })
+  }
+
+  return cachedPageForSite(site.tenant.id, isPlatformTenant, site.pagePath, site.locale)
+}
+
+export function buildCanonicalURLs({
+  site,
+  pagePath,
   requestHost,
 }: {
   site: SiteContext
-  page: PageWithMeta
+  /** Path konten relatif terhadap root site (mis. `/`, `/artikel/foo`). */
+  pagePath: string
   requestHost: string
 }): { canonicalURL: string; alternateURLs: Record<string, string> } {
-  const pagePath = extractPagePath(page)
   const tenant = site.tenant as Tenant & {
     slug?: string | null
     type?: string | null
@@ -215,16 +268,29 @@ export const getPageForRequest = cache(
     const meta = (page.meta || page.seoMetadata || {}) as PageLayoutData['meta']
     const { canonicalURL, alternateURLs } = buildCanonicalURLs({
       site,
-      page,
+      pagePath: extractPagePath(page),
       requestHost: host,
     })
 
     const rawCanvas = (page as Page & { canvasBlocks?: any }).canvasBlocks
     const canvasBlocks = Array.isArray(rawCanvas) ? rawCanvas : []
 
+    const tenantWithLayout = tenant as Tenant & {
+      defaultLayoutMode?: LayoutMode | null
+    }
+    const pageWithLayout = page as Page & { layoutMode?: LayoutMode | null }
+
+    const layoutMode: LayoutMode =
+      pageWithLayout.layoutMode ||
+      tenantWithLayout.defaultLayoutMode ||
+      (tenant.type === 'platform' ? 'canvas' : 'inherit')
+
+    const chrome = await getTenantChrome(tenant.id)
+
     return {
       page,
       tenant,
+      tenantID: tenant.id,
       site,
       theme,
       favicon: faviconFromTenant(tenant),
@@ -240,6 +306,8 @@ export const getPageForRequest = cache(
       isPreview,
       basePath: site.basePath,
       locale: site.locale,
+      layoutMode,
+      chrome,
       canvasBlocks,
     }
   },

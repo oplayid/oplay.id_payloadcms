@@ -1,6 +1,14 @@
 import React from 'react'
 import { getComponentRegistryMap } from './componentRegistry'
 import { siteHref, type Locale } from '@/lib/urls'
+import { buildThemeVariables } from '@/lib/themeStyle'
+
+/** Konteks situs yang diteruskan ke setiap blok. */
+export type BlockSiteContext = {
+  tenantID: string
+  basePath: string
+  locale: Locale
+}
 
 type CanvasRendererProps = {
   layoutData?: {
@@ -9,6 +17,9 @@ type CanvasRendererProps = {
     canvasBlocks?: Array<any>
     basePath?: string
     locale?: Locale
+    layoutMode?: 'inherit' | 'canvas' | 'bare'
+    /** ID tenant, dibutuhkan blok yang mengambil data dari koleksi lain. */
+    tenantID?: string
   }
 }
 
@@ -40,42 +51,26 @@ export default function CanvasRenderer({ layoutData = {} }: CanvasRendererProps)
 
   // Mendukung tema dari objek langsung ATAU dari preset string Payload
   const theme = layoutData.theme || {}
-  const colors = theme.colors || {}
-  const fonts = theme.fonts || {}
-  const effects = theme.effects || {}
-
-  const dynamicThemeStyle = {
-    ...(colors.bg ? { '--theme-bg': colors.bg } : {}),
-    ...(colors.surface ? { '--theme-surface': colors.surface } : {}),
-    ...(colors.elevated ? { '--theme-elevated': colors.elevated } : {}),
-    ...(colors.border ? { '--theme-border': colors.border } : {}),
-    ...(colors['border-hover'] ? { '--theme-border-hover': colors['border-hover'] } : {}),
-    ...(colors.text ? { '--theme-text': colors.text } : {}),
-    ...(colors.muted ? { '--theme-muted': colors.muted } : {}),
-    ...(colors.inverse ? { '--theme-inverse': colors.inverse } : {}),
-    ...(colors.primary ? { '--theme-primary': colors.primary } : {}),
-    ...(colors['primary-hover'] ? { '--theme-primary-hover': colors['primary-hover'] } : {}),
-    ...(colors['primary-text'] ? { '--theme-primary-text': colors['primary-text'] } : {}),
-    ...(colors.accent ? { '--theme-accent': colors.accent } : {}),
-    ...(colors['accent-hover'] ? { '--theme-accent-hover': colors['accent-hover'] } : {}),
-    ...(colors.success ? { '--theme-success': colors.success } : {}),
-    ...(colors.warning ? { '--theme-warning': colors.warning } : {}),
-    ...(colors.danger ? { '--theme-danger': colors.danger } : {}),
-    ...(colors.info ? { '--theme-info': colors.info } : {}),
-    ...(fonts.heading ? { '--theme-font-heading': fonts.heading } : {}),
-    ...(fonts.sub ? { '--theme-font-sub': fonts.sub } : {}),
-    ...(fonts.body ? { '--theme-font-body': fonts.body } : {}),
-    ...(effects['radius-box'] ? { '--theme-radius-box': effects['radius-box'] } : {}),
-    ...(effects['radius-btn'] ? { '--theme-radius-btn': effects['radius-btn'] } : {}),
-    ...(effects.shadow ? { '--theme-shadow': effects.shadow } : {}),
-  } as React.CSSProperties
+  const dynamicThemeStyle = buildThemeVariables(theme)
 
   const containerClass = theme.layout?.containerClass || 'w-full max-w-5xl space-y-6'
+  const layoutMode = layoutData.layoutMode || 'inherit'
+  // 'bare' tidak punya navbar, jadi tidak perlu ruang di atas.
+  const topPadding = layoutMode === 'bare' ? 'pt-0' : 'pt-16 md:pt-28'
   const canvasBlocks = localizeBlockHrefs(
     layoutData.canvasBlocks || [],
     layoutData.basePath || '',
     layoutData.locale || 'id',
   )
+
+  // Diteruskan ke blok yang perlu query data tenant (mis. Daftar Artikel).
+  const siteContext: BlockSiteContext | undefined = layoutData.tenantID
+    ? {
+        tenantID: layoutData.tenantID,
+        basePath: layoutData.basePath || '',
+        locale: layoutData.locale || 'id',
+      }
+    : undefined
 
   return (
     <main
@@ -86,7 +81,7 @@ export default function CanvasRenderer({ layoutData = {} }: CanvasRendererProps)
           containerName: 'canvas_viewport',
         } as React.CSSProperties
       }
-      className="w-full max-w-full box-border bg-(--theme-bg) text-(--theme-text) flex flex-col items-center pt-16 md:pt-28 pb-12 transition-colors duration-300 overflow-x-hidden"
+      className={`w-full max-w-full box-border bg-(--theme-bg) text-(--theme-text) flex flex-col items-center ${topPadding} pb-12 transition-colors duration-300 overflow-x-hidden`}
     >
       {canvasBlocks.map((block: any, index: number) => {
         // Payload CMS menggunakan block.blockType, kita berikan fallback ke block.type
@@ -98,7 +93,10 @@ export default function CanvasRenderer({ layoutData = {} }: CanvasRendererProps)
           return null
         }
 
-        const isHero = blockType === 'HeroBanner' || blockType === 'Hero'
+        const isHero =
+          blockType === 'HeroBanner' ||
+          blockType === 'Hero' ||
+          blockType === 'AdvancedHTML'
         const scrollStyle = { scrollMarginTop: '120px' }
         const blockThemeLayout =
           block.themeLayout ||
@@ -124,6 +122,7 @@ export default function CanvasRenderer({ layoutData = {} }: CanvasRendererProps)
                   variant: componentData.variant || block.variant,
                 }}
                 themeLayout={blockThemeLayout}
+                siteContext={siteContext}
               />
             </div>
           )
@@ -143,6 +142,7 @@ export default function CanvasRenderer({ layoutData = {} }: CanvasRendererProps)
                 variant: componentData.variant || block.variant,
               }}
               themeLayout={blockThemeLayout}
+              siteContext={siteContext}
             />
           </div>
         )

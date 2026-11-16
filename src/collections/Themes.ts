@@ -1,4 +1,5 @@
 import { CollectionConfig } from 'payload'
+import { CACHE_TAGS, invalidateContent } from '@/lib/contentCache'
 
 export const Themes: CollectionConfig = {
   slug: 'themes',
@@ -8,6 +9,18 @@ export const Themes: CollectionConfig = {
   },
   access: {
     read: () => true,
+  },
+  hooks: {
+    afterChange: [
+      async () => {
+        await invalidateContent([CACHE_TAGS.themes])
+      },
+    ],
+    afterDelete: [
+      async () => {
+        await invalidateContent([CACHE_TAGS.themes])
+      },
+    ],
   },
   fields: [
     {

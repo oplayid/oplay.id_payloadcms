@@ -72,6 +72,9 @@ export interface Config {
     pages: Page;
     themes: Theme;
     tenants: Tenant;
+    templates: Template;
+    redirects: Redirect;
+    posts: Post;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -84,6 +87,9 @@ export interface Config {
     pages: PagesSelect<false> | PagesSelect<true>;
     themes: ThemesSelect<false> | ThemesSelect<true>;
     tenants: TenantsSelect<false> | TenantsSelect<true>;
+    templates: TemplatesSelect<false> | TemplatesSelect<true>;
+    redirects: RedirectsSelect<false> | RedirectsSelect<true>;
+    posts: PostsSelect<false> | PostsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -191,6 +197,112 @@ export interface Tenant {
       }[]
     | null;
   /**
+   * Aktif: situs juga dapat diakses lewat oplay.id/<slug>. Nonaktif: hanya lewat host/domain miliknya (mencegah konten klien bocor ke domain platform).
+   */
+  exposeSubpath?: boolean | null;
+  /**
+   * Dipakai halaman yang tidak memilih layout sendiri. "Kanvas penuh" cocok untuk situs yang ingin navbar/footer di dalam blok halaman.
+   */
+  defaultLayoutMode?: ('inherit' | 'canvas' | 'bare') | null;
+  /**
+   * Navbar yang dipakai otomatis oleh halaman ber-layout "Ikuti layout situs". Tidak wajib — halaman juga bisa memakai blok Navbar sendiri lewat layout "Kanvas penuh".
+   */
+  navigation?: {
+    enabled?: boolean | null;
+    style?:
+      | (
+          | 'navbar-standard'
+          | 'navbar-cyber-terminal'
+          | 'navbar-floating-island'
+          | 'navbar-command-palette'
+          | 'navbar-dual-tier'
+          | 'navbar-dynamic-island'
+          | 'navbar-editorial'
+        )
+      | null;
+    /**
+     * Kosongkan untuk memakai nama tenant.
+     */
+    brandName?: string | null;
+    categories?:
+      | {
+          label: string;
+          /**
+           * Diutamakan daripada URL manual.
+           */
+          page?: (string | null) | Page;
+          href?: string | null;
+          items?:
+            | {
+                label: string;
+                description?: string | null;
+                /**
+                 * Diutamakan daripada URL manual.
+                 */
+                page?: (string | null) | Page;
+                href?: string | null;
+                isFeatured?: boolean | null;
+                image?: (string | null) | Media;
+                id?: string | null;
+              }[]
+            | null;
+          id?: string | null;
+        }[]
+      | null;
+    languages?:
+      | {
+          code: string;
+          label: string;
+          name?: string | null;
+          flag?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+    loginCta?: {
+      label?: string | null;
+      href?: string | null;
+    };
+  };
+  footer?: {
+    enabled?: boolean | null;
+    style?:
+      | ('footer-standard' | 'footer-terminal' | 'footer-massive-grid' | 'footer-minimal-center' | 'footer-status-bar')
+      | null;
+    /**
+     * Kosongkan untuk memakai nama tenant.
+     */
+    companyName?: string | null;
+    tagline?: string | null;
+    year?: number | null;
+    columns?:
+      | {
+          title: string;
+          links?:
+            | {
+                label: string;
+                /**
+                 * Diutamakan daripada URL manual.
+                 */
+                page?: (string | null) | Page;
+                href?: string | null;
+                id?: string | null;
+              }[]
+            | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  /**
+   * CSS/JS kustom untuk seluruh situs tenant ini (analytics, pixel, font kustom). Hanya superadmin yang dapat mengubah.
+   */
+  codeInjection?: {
+    customCss?: string | null;
+    /**
+     * Dijalankan setelah halaman dimuat. Gunakan dengan hati-hati.
+     */
+    customJs?: string | null;
+  };
+  /**
    * URL favicon untuk seluruh halaman tenant ini, contoh /images/favicon.ico atau URL CDN.
    */
   favicon?: string | null;
@@ -209,61 +321,6 @@ export interface Tenant {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media".
- */
-export interface Media {
-  id: string;
-  tenant?: (string | null) | Tenant;
-  alt: string;
-  _objectKey?: string | null;
-  updatedAt: string;
-  createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
-  sizes?: {
-    thumbnail?: {
-      url?: string | null;
-      width?: number | null;
-      height?: number | null;
-      mimeType?: string | null;
-      filesize?: number | null;
-      filename?: string | null;
-    };
-    card?: {
-      url?: string | null;
-      width?: number | null;
-      height?: number | null;
-      mimeType?: string | null;
-      filesize?: number | null;
-      filename?: string | null;
-    };
-    hero?: {
-      url?: string | null;
-      width?: number | null;
-      height?: number | null;
-      mimeType?: string | null;
-      filesize?: number | null;
-      filename?: string | null;
-    };
-    og?: {
-      url?: string | null;
-      width?: number | null;
-      height?: number | null;
-      mimeType?: string | null;
-      filesize?: number | null;
-      filename?: string | null;
-    };
-  };
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "pages".
  */
 export interface Page {
@@ -279,6 +336,10 @@ export interface Page {
    */
   parent?: (string | null) | Page;
   themePreset?: (string | null) | Theme;
+  /**
+   * Kosongkan untuk mengikuti layout default tenant. Pilih "Kanvas penuh" jika halaman ini memakai blok Navbar/Footer sendiri.
+   */
+  layoutMode?: ('inherit' | 'canvas' | 'bare') | null;
   canvasBlocks?:
     | (
         | {
@@ -1144,6 +1205,49 @@ export interface Page {
             blockName?: string | null;
             blockType: 'AppleVideoScrub';
           }
+        | {
+            variant?: ('article-grid' | 'article-list' | 'article-featured' | 'article-compact') | null;
+            sectionBadge?: string | null;
+            sectionTitle?: string | null;
+            sectionSubtitle?: string | null;
+            source?: ('latest' | 'manual' | 'category') | null;
+            /**
+             * Urutan tampil mengikuti urutan pilihan.
+             */
+            posts?: (string | Post)[] | null;
+            /**
+             * Harus sama persis dengan salah satu kategori pada artikel.
+             */
+            category?: string | null;
+            /**
+             * Maksimal 24 artikel per blok.
+             */
+            limit?: number | null;
+            showCover?: boolean | null;
+            showExcerpt?: boolean | null;
+            showDate?: boolean | null;
+            emptyMessage?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'ArticleList';
+          }
+        | {
+            /**
+             * Markup mentah. Ditempel apa adanya ke dalam halaman.
+             */
+            html: string;
+            /**
+             * Disisipkan sebagai tag <style> di halaman ini saja.
+             */
+            css?: string | null;
+            /**
+             * Dijalankan setelah halaman dimuat. Gunakan dengan hati-hati.
+             */
+            js?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'AdvancedHTML';
+          }
       )[]
     | null;
   meta?: {
@@ -1191,6 +1295,1204 @@ export interface Theme {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: string;
+  tenant?: (string | null) | Tenant;
+  alt: string;
+  _objectKey?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+  sizes?: {
+    thumbnail?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+    card?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+    hero?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+    og?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+  };
+}
+/**
+ * Artikel tampil di URL /artikel/<slug>. Buat halaman daftar dengan blok "Daftar Artikel".
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "posts".
+ */
+export interface Post {
+  id: string;
+  tenant?: (string | null) | Tenant;
+  title: string;
+  /**
+   * Dipakai pada URL /artikel/<slug>. Kosongkan untuk dibuat otomatis dari judul.
+   */
+  slug: string;
+  /**
+   * Diisi otomatis saat artikel pertama kali dipublikasikan.
+   */
+  publishedAt?: string | null;
+  /**
+   * Nama yang tampil di halaman artikel.
+   */
+  author?: string | null;
+  /**
+   * Tampil di kartu daftar artikel dan sebagai meta description bila SEO kosong. Maksimal ~2 kalimat.
+   */
+  excerpt?: string | null;
+  /**
+   * Dipakai di kartu daftar, halaman artikel, dan Open Graph.
+   */
+  cover?: (string | null) | Media;
+  /**
+   * Tekan Enter untuk menambah. Dipakai filter pada blok Daftar Artikel.
+   */
+  categories?: string[] | null;
+  content?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  meta?: {
+    title?: string | null;
+    description?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (string | null) | Media;
+  };
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * Halaman awal yang bisa disalin ke tenant baru. Setelah diterapkan, halaman menjadi milik tenant dan bebas diubah.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "templates".
+ */
+export interface Template {
+  id: string;
+  /**
+   * Contoh: Company Profile, UMKM Toko Online, Undangan Pernikahan.
+   */
+  name: string;
+  /**
+   * Huruf kecil dan tanda hubung, contoh: company-profile.
+   */
+  slug: string;
+  category?: ('business' | 'umkm' | 'portfolio' | 'legal' | 'event' | 'other') | null;
+  /**
+   * Ditampilkan di daftar pilihan template.
+   */
+  description?: string | null;
+  previewImage?: (string | null) | Media;
+  /**
+   * Diterapkan ke tenant hanya jika tenant belum punya tema.
+   */
+  themePreset?: (string | null) | Theme;
+  /**
+   * Dipakai halaman template yang tidak menentukan layout sendiri. Halaman hasil salinan tetap bisa diubah per halaman.
+   */
+  defaultLayoutMode?: ('inherit' | 'canvas' | 'bare') | null;
+  /**
+   * Navbar yang dipakai otomatis oleh halaman ber-layout "Ikuti layout situs". Tidak wajib — halaman juga bisa memakai blok Navbar sendiri lewat layout "Kanvas penuh".
+   */
+  navigation?: {
+    enabled?: boolean | null;
+    style?:
+      | (
+          | 'navbar-standard'
+          | 'navbar-cyber-terminal'
+          | 'navbar-floating-island'
+          | 'navbar-command-palette'
+          | 'navbar-dual-tier'
+          | 'navbar-dynamic-island'
+          | 'navbar-editorial'
+        )
+      | null;
+    /**
+     * Kosongkan untuk memakai nama tenant.
+     */
+    brandName?: string | null;
+    categories?:
+      | {
+          label: string;
+          /**
+           * Otomatis ditautkan ke halaman hasil salinan. Utamakan field ini daripada URL manual.
+           */
+          pageSlug?: string | null;
+          href?: string | null;
+          items?:
+            | {
+                label: string;
+                description?: string | null;
+                /**
+                 * Otomatis ditautkan ke halaman hasil salinan. Utamakan field ini daripada URL manual.
+                 */
+                pageSlug?: string | null;
+                href?: string | null;
+                isFeatured?: boolean | null;
+                image?: (string | null) | Media;
+                id?: string | null;
+              }[]
+            | null;
+          id?: string | null;
+        }[]
+      | null;
+    languages?:
+      | {
+          code: string;
+          label: string;
+          name?: string | null;
+          flag?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+    loginCta?: {
+      label?: string | null;
+      href?: string | null;
+    };
+  };
+  footer?: {
+    enabled?: boolean | null;
+    style?:
+      | ('footer-standard' | 'footer-terminal' | 'footer-massive-grid' | 'footer-minimal-center' | 'footer-status-bar')
+      | null;
+    /**
+     * Kosongkan untuk memakai nama tenant.
+     */
+    companyName?: string | null;
+    tagline?: string | null;
+    year?: number | null;
+    columns?:
+      | {
+          title: string;
+          links?:
+            | {
+                label: string;
+                /**
+                 * Otomatis ditautkan ke halaman hasil salinan. Utamakan field ini daripada URL manual.
+                 */
+                pageSlug?: string | null;
+                href?: string | null;
+                id?: string | null;
+              }[]
+            | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  /**
+   * Halaman dibuat berurutan: induk lebih dulu, lalu anak (isi "Slug induk").
+   */
+  pages?:
+    | {
+        title: string;
+        /**
+         * Contoh: home, tentang-kami, layanan.
+         */
+        slug: string;
+        /**
+         * Isi jika halaman ini adalah sub-halaman, contoh: isi "layanan" untuk layanan/konsultasi.
+         */
+        parentSlug?: string | null;
+        /**
+         * Kosongkan untuk memakai layout default template.
+         */
+        layoutMode?: ('inherit' | 'canvas' | 'bare') | null;
+        blocks?:
+          | (
+              | {
+                  variant?:
+                    | (
+                        | 'navbar-standard'
+                        | 'navbar-cyber-terminal'
+                        | 'navbar-floating-island'
+                        | 'navbar-command-palette'
+                        | 'navbar-dual-tier'
+                        | 'navbar-dynamic-island'
+                        | 'navbar-editorial'
+                      )
+                    | null;
+                  brandName?: string | null;
+                  categories?:
+                    | {
+                        label: string;
+                        href?: string | null;
+                        items?:
+                          | {
+                              label: string;
+                              description?: string | null;
+                              href: string;
+                              isFeatured?: boolean | null;
+                              image?: (string | null) | Media;
+                              id?: string | null;
+                            }[]
+                          | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  languages?:
+                    | {
+                        code: string;
+                        label: string;
+                        name?: string | null;
+                        flag?: string | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  loginCta?: {
+                    label?: string | null;
+                    href?: string | null;
+                  };
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'Navbar';
+                }
+              | {
+                  variant?:
+                    | (
+                        | 'hero-standard'
+                        | 'hero-casual-elegant'
+                        | 'hero-cyber-terminal'
+                        | 'hero-split-bento'
+                        | 'hero-holographic-glow'
+                        | 'hero-status-ticker'
+                        | 'hero-minimal-bottom-left'
+                        | 'hero-saas-showcase'
+                      )
+                    | null;
+                  badge?: string | null;
+                  title: string;
+                  subtitle?: string | null;
+                  align?: ('center' | 'left') | null;
+                  cta?: {
+                    label?: string | null;
+                    href?: string | null;
+                  };
+                  secondaryCta?: {
+                    label?: string | null;
+                    href?: string | null;
+                  };
+                  bgImage?: (string | null) | Media;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'HeroBanner';
+                }
+              | {
+                  labels?: {
+                    cases?: string | null;
+                    clients?: string | null;
+                    accuracy?: string | null;
+                    uptime?: string | null;
+                  };
+                  casesProcessed?: string | null;
+                  activeClients?: string | null;
+                  aiAccuracy?: string | null;
+                  uptime?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'LegalStats';
+                }
+              | {
+                  title: string;
+                  aiModel?: string | null;
+                  placeholder?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'AIChatWidget';
+                }
+              | {
+                  variant?:
+                    | (
+                        | 'footer-standard'
+                        | 'footer-terminal'
+                        | 'footer-massive-grid'
+                        | 'footer-minimal-center'
+                        | 'footer-status-bar'
+                      )
+                    | null;
+                  year?: number | null;
+                  companyName?: string | null;
+                  tagline?: string | null;
+                  navigationColumns?:
+                    | {
+                        title: string;
+                        links?:
+                          | {
+                              label: string;
+                              href: string;
+                              id?: string | null;
+                            }[]
+                          | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'Footer';
+                }
+              | {
+                  badge?: string | null;
+                  title: string;
+                  description: string;
+                  layout?: ('split-left' | 'split-right' | 'stacked') | null;
+                  image?: (string | null) | Media;
+                  cta: {
+                    label: string;
+                    href: string;
+                  };
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'ContentSection';
+                }
+              | {
+                  sectionTitle?: string | null;
+                  sectionSubtitle?: string | null;
+                  items?:
+                    | {
+                        title: string;
+                        description: string;
+                        span?: ('col-span-1' | 'col-span-2' | 'md:col-span-2') | null;
+                        badge?: string | null;
+                        icon?: string | null;
+                        href?: string | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'BentoGrid';
+                }
+              | {
+                  badge?: string | null;
+                  title: string;
+                  description: string;
+                  primaryCta: {
+                    label: string;
+                    href: string;
+                  };
+                  secondaryCta?: {
+                    label?: string | null;
+                    href?: string | null;
+                  };
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'EnterpriseCallout';
+                }
+              | {
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  steps?:
+                    | {
+                        number: string;
+                        title: string;
+                        description: string;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'FeatureSteps';
+                }
+              | {
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle?: string | null;
+                  variant?: ('list' | 'bento') | null;
+                  enableAICopilot?: boolean | null;
+                  faqs?:
+                    | {
+                        question: string;
+                        answer: string;
+                        category?: string | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'FAQHub';
+                }
+              | {
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle?: string | null;
+                  items?:
+                    | {
+                        title: string;
+                        description: string;
+                        code?: string | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'TrustCompliance';
+                }
+              | {
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle?: string | null;
+                  plans?:
+                    | {
+                        name: string;
+                        price: string;
+                        period?: string | null;
+                        description?: string | null;
+                        features?: string[] | null;
+                        isPopular?: boolean | null;
+                        ctaLabel?: string | null;
+                        ctaHref?: string | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'PricingTiers';
+                }
+              | {
+                  sectionBadge?: string | null;
+                  tabs?:
+                    | {
+                        id: string;
+                        label: string;
+                        title: string;
+                        subtitle: string;
+                        content: string;
+                        extraDetails?:
+                          | {
+                              label?: string | null;
+                              value?: string | null;
+                              id?: string | null;
+                            }[]
+                          | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'CompanyHub';
+                }
+              | {
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle?: string | null;
+                  enableCategoryFilter?: boolean | null;
+                  profiles?:
+                    | {
+                        id: string;
+                        name: string;
+                        role: string;
+                        category?: string | null;
+                        avatarUrl?: (string | null) | Media;
+                        bio?: string | null;
+                        badge?: string | null;
+                        metrics?:
+                          | {
+                              label?: string | null;
+                              value?: string | null;
+                              id?: string | null;
+                            }[]
+                          | null;
+                        skills?: string[] | null;
+                        socialLinks?:
+                          | {
+                              platform: string;
+                              href: string;
+                              id?: string | null;
+                            }[]
+                          | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'ProfileHub';
+                }
+              | {
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle?: string | null;
+                  items?:
+                    | {
+                        type?: ('image' | 'video') | null;
+                        src: string | Media;
+                        poster?: (string | null) | Media;
+                        title: string;
+                        subtitle?: string | null;
+                        category?: string | null;
+                        href?: string | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'MediaCardGrid';
+                }
+              | {
+                  variant?:
+                    ('ticker-minimal' | 'ticker-card' | 'ticker-glow' | 'ticker-vertical' | 'ticker-compact') | null;
+                  /**
+                   * Contoh: Performa Sistem Real-Time
+                   */
+                  sectionBadge?: string | null;
+                  sectionTitle?: string | null;
+                  sectionSubtitle?: string | null;
+                  /**
+                   * Tambahkan item statistik atau metrik yang ingin ditampilkan.
+                   */
+                  metrics?:
+                    | {
+                        label: string;
+                        value: string;
+                        trend?: string | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'MetricsTicker';
+                }
+              | {
+                  variant?:
+                    | (
+                        | 'matrix-standard'
+                        | 'matrix-highlight-middle'
+                        | 'matrix-side-cards'
+                        | 'matrix-terminal-style'
+                        | 'matrix-minimal-clean'
+                      )
+                    | null;
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle?: string | null;
+                  /**
+                   * Urutan nama paket menentukan urutan kolom matriks.
+                   */
+                  planNames: string[];
+                  features?:
+                    | {
+                        name: string;
+                        description?: string | null;
+                        /**
+                         * Urutkan sesuai urutan Nama Paket. Centang "Termasuk" atau isi label khusus (mis. "5 GB").
+                         */
+                        tiers?:
+                          | {
+                              included?: boolean | null;
+                              label?: string | null;
+                              id?: string | null;
+                            }[]
+                          | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'FeatureMatrix';
+                }
+              | {
+                  variant?:
+                    | (
+                        | 'testimonial-grid'
+                        | 'testimonial-featured-single'
+                        | 'testimonial-masonry'
+                        | 'testimonial-quote-bubble'
+                        | 'testimonial-minimal-slider'
+                        | 'testimonial-cards'
+                      )
+                    | null;
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle?: string | null;
+                  testimonials?:
+                    | {
+                        quote: string;
+                        authorName: string;
+                        authorRole: string;
+                        companyName: string;
+                        avatarUrl?: (string | null) | Media;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'TestimonialCarousel';
+                }
+              | {
+                  variant?:
+                    | (
+                        | 'roadmap-horizontal-cards'
+                        | 'roadmap-vertical-timeline'
+                        | 'roadmap-numbered-steps'
+                        | 'roadmap-interactive-steps'
+                        | 'roadmap-compact-pills'
+                      )
+                    | null;
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle?: string | null;
+                  steps?:
+                    | {
+                        stepNumber: string;
+                        title: string;
+                        description: string;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'ProcessRoadmap';
+                }
+              | {
+                  variant?:
+                    | (
+                        | 'logo-grid-monochrome'
+                        | 'logo-bordered-boxes'
+                        | 'logo-glow-cards'
+                        | 'logo-minimal-pills'
+                        | 'logo-row-clean'
+                      )
+                    | null;
+                  sectionBadge?: string | null;
+                  sectionTitle?: string | null;
+                  sectionSubtitle?: string | null;
+                  logos?:
+                    | {
+                        name: string;
+                        logoSrc?: (string | null) | Media;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'LogoCloud';
+                }
+              | {
+                  variant?:
+                    | (
+                        | 'tabs-pill-top'
+                        | 'tabs-sidebar-layout'
+                        | 'tabs-grid-cards'
+                        | 'tabs-terminal-console'
+                        | 'tabs-minimal-underline'
+                      )
+                    | null;
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle?: string | null;
+                  tabs?:
+                    | {
+                        id: string;
+                        label: string;
+                        title: string;
+                        subtitle: string;
+                        content: string;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'InteractiveTabs';
+                }
+              | {
+                  variant?:
+                    | (
+                        | 'integration-grid-standard'
+                        | 'integration-horizontal-list'
+                        | 'integration-minimal-pills'
+                        | 'integration-glow-cards'
+                        | 'integration-category-grouped'
+                      )
+                    | null;
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle?: string | null;
+                  integrations?:
+                    | {
+                        name: string;
+                        category: string;
+                        description: string;
+                        status?: string | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'IntegrationGrid';
+                }
+              | {
+                  variant?:
+                    | (
+                        | 'resource-card-grid'
+                        | 'resource-table-list'
+                        | 'resource-featured-download'
+                        | 'resource-category-tabs'
+                        | 'resource-minimal-card'
+                      )
+                    | null;
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle?: string | null;
+                  resources?:
+                    | {
+                        title: string;
+                        category: string;
+                        description: string;
+                        fileType: string;
+                        fileSize: string;
+                        downloadHref: string;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'ResourceLibrary';
+                }
+              | {
+                  variant?:
+                    | (
+                        | 'team-portrait-grid'
+                        | 'team-horizontal-card'
+                        | 'team-minimal-avatar'
+                        | 'team-interactive-overlay'
+                        | 'team-executive-spotlight'
+                      )
+                    | null;
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle?: string | null;
+                  members?:
+                    | {
+                        name: string;
+                        role: string;
+                        bio: string;
+                        badge?: string | null;
+                        skills?: string[] | null;
+                        imageUrl?: (string | null) | Media;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'TeamDirectory';
+                }
+              | {
+                  variant?:
+                    | (
+                        | 'newsletter-centered-box'
+                        | 'newsletter-split-banner'
+                        | 'newsletter-floating-bar'
+                        | 'newsletter-minimal-card'
+                        | 'newsletter-terminal-glow'
+                      )
+                    | null;
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle: string;
+                  placeholderText?: string | null;
+                  buttonText?: string | null;
+                  successMessage?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'NewsletterCta';
+                }
+              | {
+                  variant?:
+                    | (
+                        | 'banner-top-alert'
+                        | 'banner-floating-pill'
+                        | 'banner-with-icon'
+                        | 'banner-action-right'
+                        | 'banner-minimal-line'
+                      )
+                    | null;
+                  badgeText?: string | null;
+                  message: string;
+                  action?: {
+                    label?: string | null;
+                    href?: string | null;
+                  };
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'NotificationBanner';
+                }
+              | {
+                  variant?:
+                    | (
+                        | 'comparison-two-columns'
+                        | 'comparison-vs-badge'
+                        | 'comparison-table-format'
+                        | 'comparison-cards-stacked'
+                        | 'comparison-highlight-after'
+                      )
+                    | null;
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle?: string | null;
+                  beforeTitle: string;
+                  beforeItems?:
+                    | {
+                        text: string;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  afterTitle: string;
+                  afterItems?:
+                    | {
+                        text: string;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'ComparisonSplit';
+                }
+              | {
+                  variant?:
+                    | (
+                        | 'status-list-standard'
+                        | 'status-card-grid'
+                        | 'status-compact-badge'
+                        | 'status-minimal-line'
+                        | 'status-terminal-panel'
+                      )
+                    | null;
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle?: string | null;
+                  overallStatusText?: string | null;
+                  services?:
+                    | {
+                        serviceName: string;
+                        uptimePercentage: string;
+                        statusText: string;
+                        latency?: string | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'LiveStatus';
+                }
+              | {
+                  variant?:
+                    | (
+                        | 'gallery-grid-standard'
+                        | 'gallery-masonry-style'
+                        | 'gallery-featured-hero'
+                        | 'gallery-horizontal-strip'
+                        | 'gallery-minimal-cards'
+                      )
+                    | null;
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle?: string | null;
+                  images?:
+                    | {
+                        src: string | Media;
+                        alt: string;
+                        caption?: string | null;
+                        category?: string | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'GalleryLightbox';
+                }
+              | {
+                  variant?:
+                    | (
+                        | 'accordion-vertical-list'
+                        | 'accordion-boxed-cards'
+                        | 'accordion-category-grouped'
+                        | 'accordion-minimal-lines'
+                        | 'accordion-expanded-first'
+                      )
+                    | null;
+                  sectionBadge?: string | null;
+                  sectionTitle: string;
+                  sectionSubtitle?: string | null;
+                  items?:
+                    | {
+                        question: string;
+                        answer: string;
+                        category?: string | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'AccordionDirectory';
+                }
+              | {
+                  variant?: ('bio-card-minimal' | 'cv-modern-resume') | null;
+                  avatarUrl?: (string | null) | Media;
+                  name: string;
+                  title: string;
+                  bio: string;
+                  location?: string | null;
+                  badge?: string | null;
+                  links?:
+                    | {
+                        platform: string;
+                        url: string;
+                        description?: string | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  experiences?:
+                    | {
+                        role: string;
+                        company: string;
+                        period: string;
+                        category?: ('work' | 'organization' | 'education' | 'project') | null;
+                        description: string;
+                        achievements?: string[] | null;
+                        skills?: string[] | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'BioProfile';
+                }
+              | {
+                  frontContent?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  backContent?: {
+                    root: {
+                      type: string;
+                      children: {
+                        type: any;
+                        version: number;
+                        [k: string]: unknown;
+                      }[];
+                      direction: ('ltr' | 'rtl') | null;
+                      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                      indent: number;
+                      version: number;
+                    };
+                    [k: string]: unknown;
+                  } | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'DocumentFlip';
+                }
+              | {
+                  badge?: string | null;
+                  name: string;
+                  title: string;
+                  contact?: {
+                    phone?: string | null;
+                    email?: string | null;
+                    linkedin?: string | null;
+                    location?: string | null;
+                  };
+                  summary: string;
+                  experiences?:
+                    | {
+                        role: string;
+                        company: string;
+                        period: string;
+                        location?: string | null;
+                        description?: string[] | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  skills?: {
+                    personal?: string[] | null;
+                    computation?: string[] | null;
+                    technical?: string[] | null;
+                    certifications?: string[] | null;
+                  };
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'ProfessionalCV';
+                }
+              | {
+                  variant?: ('apple-coverflow' | 'apple-stack' | 'apple-smooth-scroll') | null;
+                  title?: string | null;
+                  photos: {
+                    url: string | Media;
+                    alt: string;
+                    caption?: string | null;
+                    id?: string | null;
+                  }[];
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'AnimatedPhotoBanner';
+                }
+              | {
+                  variant?: ('hardware-video' | 'bento-spotlight' | 'sticky-stack' | 'text-reveal') | null;
+                  title?: string | null;
+                  subtitle?: string | null;
+                  items?:
+                    | {
+                        title: string;
+                        description: string;
+                        tag?: string | null;
+                        image?: (string | null) | Media;
+                        videoUrl?: (string | null) | Media;
+                        link?: string | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'AppleInteractiveShowcase';
+                }
+              | {
+                  title?: string | null;
+                  subtitle?: string | null;
+                  items?:
+                    | {
+                        videoUrl: string | Media;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'AppleVideoScrub';
+                }
+              | {
+                  variant?: ('article-grid' | 'article-list' | 'article-featured' | 'article-compact') | null;
+                  sectionBadge?: string | null;
+                  sectionTitle?: string | null;
+                  sectionSubtitle?: string | null;
+                  source?: ('latest' | 'manual' | 'category') | null;
+                  /**
+                   * Urutan tampil mengikuti urutan pilihan.
+                   */
+                  posts?: (string | Post)[] | null;
+                  /**
+                   * Harus sama persis dengan salah satu kategori pada artikel.
+                   */
+                  category?: string | null;
+                  /**
+                   * Maksimal 24 artikel per blok.
+                   */
+                  limit?: number | null;
+                  showCover?: boolean | null;
+                  showExcerpt?: boolean | null;
+                  showDate?: boolean | null;
+                  emptyMessage?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'ArticleList';
+                }
+              | {
+                  /**
+                   * Markup mentah. Ditempel apa adanya ke dalam halaman.
+                   */
+                  html: string;
+                  /**
+                   * Disisipkan sebagai tag <style> di halaman ini saja.
+                   */
+                  css?: string | null;
+                  /**
+                   * Dijalankan setelah halaman dimuat. Gunakan dengan hati-hati.
+                   */
+                  js?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'AdvancedHTML';
+                }
+            )[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Dibuat otomatis saat slug halaman berubah. Redirect manual juga bisa ditambahkan di sini.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "redirects".
+ */
+export interface Redirect {
+  id: string;
+  tenant?: (string | null) | Tenant;
+  /**
+   * Path lama, contoh: /tentang. Selalu diawali garis miring.
+   */
+  from: string;
+  /**
+   * Path baru (contoh: /tentang-kami) atau URL lengkap (https://...) untuk tujuan eksternal.
+   */
+  to: string;
+  statusCode: '301' | '302';
+  /**
+   * Ditandai sistem saat halaman di-rename. Boleh dihapus manual.
+   */
+  automatic?: boolean | null;
+  /**
+   * Opsional, mis. alasan redirect atau sumber tautan lama.
+   */
+  note?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -1232,6 +2534,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'tenants';
         value: string | Tenant;
+      } | null)
+    | ({
+        relationTo: 'templates';
+        value: string | Template;
+      } | null)
+    | ({
+        relationTo: 'redirects';
+        value: string | Redirect;
+      } | null)
+    | ({
+        relationTo: 'posts';
+        value: string | Post;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -1379,6 +2693,7 @@ export interface PagesSelect<T extends boolean = true> {
   slug?: T;
   parent?: T;
   themePreset?: T;
+  layoutMode?: T;
   canvasBlocks?:
     | T
     | {
@@ -2121,6 +3436,33 @@ export interface PagesSelect<T extends boolean = true> {
               id?: T;
               blockName?: T;
             };
+        ArticleList?:
+          | T
+          | {
+              variant?: T;
+              sectionBadge?: T;
+              sectionTitle?: T;
+              sectionSubtitle?: T;
+              source?: T;
+              posts?: T;
+              category?: T;
+              limit?: T;
+              showCover?: T;
+              showExcerpt?: T;
+              showDate?: T;
+              emptyMessage?: T;
+              id?: T;
+              blockName?: T;
+            };
+        AdvancedHTML?:
+          | T
+          | {
+              html?: T;
+              css?: T;
+              js?: T;
+              id?: T;
+              blockName?: T;
+            };
       };
   meta?:
     | T
@@ -2170,6 +3512,78 @@ export interface TenantsSelect<T extends boolean = true> {
         isPrimary?: T;
         id?: T;
       };
+  exposeSubpath?: T;
+  defaultLayoutMode?: T;
+  navigation?:
+    | T
+    | {
+        enabled?: T;
+        style?: T;
+        brandName?: T;
+        categories?:
+          | T
+          | {
+              label?: T;
+              page?: T;
+              href?: T;
+              items?:
+                | T
+                | {
+                    label?: T;
+                    description?: T;
+                    page?: T;
+                    href?: T;
+                    isFeatured?: T;
+                    image?: T;
+                    id?: T;
+                  };
+              id?: T;
+            };
+        languages?:
+          | T
+          | {
+              code?: T;
+              label?: T;
+              name?: T;
+              flag?: T;
+              id?: T;
+            };
+        loginCta?:
+          | T
+          | {
+              label?: T;
+              href?: T;
+            };
+      };
+  footer?:
+    | T
+    | {
+        enabled?: T;
+        style?: T;
+        companyName?: T;
+        tagline?: T;
+        year?: T;
+        columns?:
+          | T
+          | {
+              title?: T;
+              links?:
+                | T
+                | {
+                    label?: T;
+                    page?: T;
+                    href?: T;
+                    id?: T;
+                  };
+              id?: T;
+            };
+      };
+  codeInjection?:
+    | T
+    | {
+        customCss?: T;
+        customJs?: T;
+      };
   favicon?: T;
   themePreset?: T;
   seo?:
@@ -2182,6 +3596,903 @@ export interface TenantsSelect<T extends boolean = true> {
   domain?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "templates_select".
+ */
+export interface TemplatesSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  category?: T;
+  description?: T;
+  previewImage?: T;
+  themePreset?: T;
+  defaultLayoutMode?: T;
+  navigation?:
+    | T
+    | {
+        enabled?: T;
+        style?: T;
+        brandName?: T;
+        categories?:
+          | T
+          | {
+              label?: T;
+              pageSlug?: T;
+              href?: T;
+              items?:
+                | T
+                | {
+                    label?: T;
+                    description?: T;
+                    pageSlug?: T;
+                    href?: T;
+                    isFeatured?: T;
+                    image?: T;
+                    id?: T;
+                  };
+              id?: T;
+            };
+        languages?:
+          | T
+          | {
+              code?: T;
+              label?: T;
+              name?: T;
+              flag?: T;
+              id?: T;
+            };
+        loginCta?:
+          | T
+          | {
+              label?: T;
+              href?: T;
+            };
+      };
+  footer?:
+    | T
+    | {
+        enabled?: T;
+        style?: T;
+        companyName?: T;
+        tagline?: T;
+        year?: T;
+        columns?:
+          | T
+          | {
+              title?: T;
+              links?:
+                | T
+                | {
+                    label?: T;
+                    pageSlug?: T;
+                    href?: T;
+                    id?: T;
+                  };
+              id?: T;
+            };
+      };
+  pages?:
+    | T
+    | {
+        title?: T;
+        slug?: T;
+        parentSlug?: T;
+        layoutMode?: T;
+        blocks?:
+          | T
+          | {
+              Navbar?:
+                | T
+                | {
+                    variant?: T;
+                    brandName?: T;
+                    categories?:
+                      | T
+                      | {
+                          label?: T;
+                          href?: T;
+                          items?:
+                            | T
+                            | {
+                                label?: T;
+                                description?: T;
+                                href?: T;
+                                isFeatured?: T;
+                                image?: T;
+                                id?: T;
+                              };
+                          id?: T;
+                        };
+                    languages?:
+                      | T
+                      | {
+                          code?: T;
+                          label?: T;
+                          name?: T;
+                          flag?: T;
+                          id?: T;
+                        };
+                    loginCta?:
+                      | T
+                      | {
+                          label?: T;
+                          href?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              HeroBanner?:
+                | T
+                | {
+                    variant?: T;
+                    badge?: T;
+                    title?: T;
+                    subtitle?: T;
+                    align?: T;
+                    cta?:
+                      | T
+                      | {
+                          label?: T;
+                          href?: T;
+                        };
+                    secondaryCta?:
+                      | T
+                      | {
+                          label?: T;
+                          href?: T;
+                        };
+                    bgImage?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              LegalStats?:
+                | T
+                | {
+                    labels?:
+                      | T
+                      | {
+                          cases?: T;
+                          clients?: T;
+                          accuracy?: T;
+                          uptime?: T;
+                        };
+                    casesProcessed?: T;
+                    activeClients?: T;
+                    aiAccuracy?: T;
+                    uptime?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              AIChatWidget?:
+                | T
+                | {
+                    title?: T;
+                    aiModel?: T;
+                    placeholder?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              Footer?:
+                | T
+                | {
+                    variant?: T;
+                    year?: T;
+                    companyName?: T;
+                    tagline?: T;
+                    navigationColumns?:
+                      | T
+                      | {
+                          title?: T;
+                          links?:
+                            | T
+                            | {
+                                label?: T;
+                                href?: T;
+                                id?: T;
+                              };
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              ContentSection?:
+                | T
+                | {
+                    badge?: T;
+                    title?: T;
+                    description?: T;
+                    layout?: T;
+                    image?: T;
+                    cta?:
+                      | T
+                      | {
+                          label?: T;
+                          href?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              BentoGrid?:
+                | T
+                | {
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    items?:
+                      | T
+                      | {
+                          title?: T;
+                          description?: T;
+                          span?: T;
+                          badge?: T;
+                          icon?: T;
+                          href?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              EnterpriseCallout?:
+                | T
+                | {
+                    badge?: T;
+                    title?: T;
+                    description?: T;
+                    primaryCta?:
+                      | T
+                      | {
+                          label?: T;
+                          href?: T;
+                        };
+                    secondaryCta?:
+                      | T
+                      | {
+                          label?: T;
+                          href?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              FeatureSteps?:
+                | T
+                | {
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    steps?:
+                      | T
+                      | {
+                          number?: T;
+                          title?: T;
+                          description?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              FAQHub?:
+                | T
+                | {
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    variant?: T;
+                    enableAICopilot?: T;
+                    faqs?:
+                      | T
+                      | {
+                          question?: T;
+                          answer?: T;
+                          category?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              TrustCompliance?:
+                | T
+                | {
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    items?:
+                      | T
+                      | {
+                          title?: T;
+                          description?: T;
+                          code?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              PricingTiers?:
+                | T
+                | {
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    plans?:
+                      | T
+                      | {
+                          name?: T;
+                          price?: T;
+                          period?: T;
+                          description?: T;
+                          features?: T;
+                          isPopular?: T;
+                          ctaLabel?: T;
+                          ctaHref?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              CompanyHub?:
+                | T
+                | {
+                    sectionBadge?: T;
+                    tabs?:
+                      | T
+                      | {
+                          id?: T;
+                          label?: T;
+                          title?: T;
+                          subtitle?: T;
+                          content?: T;
+                          extraDetails?:
+                            | T
+                            | {
+                                label?: T;
+                                value?: T;
+                                id?: T;
+                              };
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              ProfileHub?:
+                | T
+                | {
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    enableCategoryFilter?: T;
+                    profiles?:
+                      | T
+                      | {
+                          id?: T;
+                          name?: T;
+                          role?: T;
+                          category?: T;
+                          avatarUrl?: T;
+                          bio?: T;
+                          badge?: T;
+                          metrics?:
+                            | T
+                            | {
+                                label?: T;
+                                value?: T;
+                                id?: T;
+                              };
+                          skills?: T;
+                          socialLinks?:
+                            | T
+                            | {
+                                platform?: T;
+                                href?: T;
+                                id?: T;
+                              };
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              MediaCardGrid?:
+                | T
+                | {
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    items?:
+                      | T
+                      | {
+                          type?: T;
+                          src?: T;
+                          poster?: T;
+                          title?: T;
+                          subtitle?: T;
+                          category?: T;
+                          href?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              MetricsTicker?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    metrics?:
+                      | T
+                      | {
+                          label?: T;
+                          value?: T;
+                          trend?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              FeatureMatrix?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    planNames?: T;
+                    features?:
+                      | T
+                      | {
+                          name?: T;
+                          description?: T;
+                          tiers?:
+                            | T
+                            | {
+                                included?: T;
+                                label?: T;
+                                id?: T;
+                              };
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              TestimonialCarousel?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    testimonials?:
+                      | T
+                      | {
+                          quote?: T;
+                          authorName?: T;
+                          authorRole?: T;
+                          companyName?: T;
+                          avatarUrl?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              ProcessRoadmap?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    steps?:
+                      | T
+                      | {
+                          stepNumber?: T;
+                          title?: T;
+                          description?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              LogoCloud?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    logos?:
+                      | T
+                      | {
+                          name?: T;
+                          logoSrc?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              InteractiveTabs?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    tabs?:
+                      | T
+                      | {
+                          id?: T;
+                          label?: T;
+                          title?: T;
+                          subtitle?: T;
+                          content?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              IntegrationGrid?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    integrations?:
+                      | T
+                      | {
+                          name?: T;
+                          category?: T;
+                          description?: T;
+                          status?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              ResourceLibrary?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    resources?:
+                      | T
+                      | {
+                          title?: T;
+                          category?: T;
+                          description?: T;
+                          fileType?: T;
+                          fileSize?: T;
+                          downloadHref?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              TeamDirectory?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    members?:
+                      | T
+                      | {
+                          name?: T;
+                          role?: T;
+                          bio?: T;
+                          badge?: T;
+                          skills?: T;
+                          imageUrl?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              NewsletterCta?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    placeholderText?: T;
+                    buttonText?: T;
+                    successMessage?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              NotificationBanner?:
+                | T
+                | {
+                    variant?: T;
+                    badgeText?: T;
+                    message?: T;
+                    action?:
+                      | T
+                      | {
+                          label?: T;
+                          href?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              ComparisonSplit?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    beforeTitle?: T;
+                    beforeItems?:
+                      | T
+                      | {
+                          text?: T;
+                          id?: T;
+                        };
+                    afterTitle?: T;
+                    afterItems?:
+                      | T
+                      | {
+                          text?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              LiveStatus?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    overallStatusText?: T;
+                    services?:
+                      | T
+                      | {
+                          serviceName?: T;
+                          uptimePercentage?: T;
+                          statusText?: T;
+                          latency?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              GalleryLightbox?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    images?:
+                      | T
+                      | {
+                          src?: T;
+                          alt?: T;
+                          caption?: T;
+                          category?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              AccordionDirectory?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    items?:
+                      | T
+                      | {
+                          question?: T;
+                          answer?: T;
+                          category?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              BioProfile?:
+                | T
+                | {
+                    variant?: T;
+                    avatarUrl?: T;
+                    name?: T;
+                    title?: T;
+                    bio?: T;
+                    location?: T;
+                    badge?: T;
+                    links?:
+                      | T
+                      | {
+                          platform?: T;
+                          url?: T;
+                          description?: T;
+                          id?: T;
+                        };
+                    experiences?:
+                      | T
+                      | {
+                          role?: T;
+                          company?: T;
+                          period?: T;
+                          category?: T;
+                          description?: T;
+                          achievements?: T;
+                          skills?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              DocumentFlip?:
+                | T
+                | {
+                    frontContent?: T;
+                    backContent?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              ProfessionalCV?:
+                | T
+                | {
+                    badge?: T;
+                    name?: T;
+                    title?: T;
+                    contact?:
+                      | T
+                      | {
+                          phone?: T;
+                          email?: T;
+                          linkedin?: T;
+                          location?: T;
+                        };
+                    summary?: T;
+                    experiences?:
+                      | T
+                      | {
+                          role?: T;
+                          company?: T;
+                          period?: T;
+                          location?: T;
+                          description?: T;
+                          id?: T;
+                        };
+                    skills?:
+                      | T
+                      | {
+                          personal?: T;
+                          computation?: T;
+                          technical?: T;
+                          certifications?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              AnimatedPhotoBanner?:
+                | T
+                | {
+                    variant?: T;
+                    title?: T;
+                    photos?:
+                      | T
+                      | {
+                          url?: T;
+                          alt?: T;
+                          caption?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              AppleInteractiveShowcase?:
+                | T
+                | {
+                    variant?: T;
+                    title?: T;
+                    subtitle?: T;
+                    items?:
+                      | T
+                      | {
+                          title?: T;
+                          description?: T;
+                          tag?: T;
+                          image?: T;
+                          videoUrl?: T;
+                          link?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              AppleVideoScrub?:
+                | T
+                | {
+                    title?: T;
+                    subtitle?: T;
+                    items?:
+                      | T
+                      | {
+                          videoUrl?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
+              ArticleList?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    source?: T;
+                    posts?: T;
+                    category?: T;
+                    limit?: T;
+                    showCover?: T;
+                    showExcerpt?: T;
+                    showDate?: T;
+                    emptyMessage?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              AdvancedHTML?:
+                | T
+                | {
+                    html?: T;
+                    css?: T;
+                    js?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+            };
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "redirects_select".
+ */
+export interface RedirectsSelect<T extends boolean = true> {
+  tenant?: T;
+  from?: T;
+  to?: T;
+  statusCode?: T;
+  automatic?: T;
+  note?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "posts_select".
+ */
+export interface PostsSelect<T extends boolean = true> {
+  tenant?: T;
+  title?: T;
+  slug?: T;
+  publishedAt?: T;
+  author?: T;
+  excerpt?: T;
+  cover?: T;
+  categories?: T;
+  content?: T;
+  meta?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

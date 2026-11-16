@@ -28,9 +28,20 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - `Users`: Application user management.
 - `Media`: Asset and image management.
 - `Themes`: Visual theme presets.
+- `Templates`: Starter site content (pages, navbar, footer, theme) that superadmin can copy into a tenant.
+- `Redirects`: Old path -> new path, created automatically on page rename. Resolved in `src/lib/redirects.ts`.
+- `Posts`: Articles with rich-text body, served at `/artikel/<slug>` (aliases `blog`, `news` redirect to canonical). Registered in `src/lib/routableCollections.ts` so detail routing, sitemap, and rename redirects are automatic.
 
 ### Logic Flow
 1. **Request**: User visits a URL.
 2. **Resolution (`src/lib/site.ts`, `src/lib/urls.ts`)**: System resolves the `tenant` and `locale` context from the host/path.
 3. **Fetching (`src/lib/pageBuilder.ts`)**: System fetches the corresponding `Page` document from the database using the tenant context.
 4. **Rendering (`src/components/CanvasRenderer.tsx`)**: Data (canvasBlocks) is passed to `CanvasRenderer`, which iterates and renders the appropriate components from the registry.
+
+### Routable Content (artikel dan koleksi lain)
+Collections that need their own public URL are registered in `src/lib/routableCollections.ts`. The catch-all route serves `/<prefix>/<slug>` **only after** page lookup fails, so pages always win on path collisions. Adding a new collection (projects, events, ...) requires:
+1. Create the collection (`src/collections/`), add slug/publishedAt hooks and redirect sync like `Posts`.
+2. Register it in `ROUTABLE_COLLECTIONS` (`prefixes`, `slugField`, `titleField`, `cacheTag`, `defaultSort`).
+3. Register the collection in `src/payload.config.ts` (collections + `seoPlugin` + `multiTenantPlugin`).
+4. Add a detail renderer in `src/components/content/RoutableDetail.tsx` and a listing block (registry + `customFieldMap`).
+5. Run `pnpm generate:types`.

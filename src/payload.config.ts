@@ -12,6 +12,9 @@ import { Media } from './collections/Media'
 import { Pages } from './collections/Pages'
 import { Themes } from './collections/Themes'
 import { Tenants } from './collections/Tenants'
+import { Templates } from './collections/Templates'
+import { Redirects } from './collections/Redirects'
+import { Posts } from './collections/Posts'
 import { seoPlugin } from '@payloadcms/plugin-seo'
 import { nestedDocsPlugin } from '@payloadcms/plugin-nested-docs'
 import { multiTenantPlugin } from '@payloadcms/plugin-multi-tenant'
@@ -36,7 +39,7 @@ export default buildConfig({
     },
   },
   // 2. Daftarkan koleksi (termasuk Tenants)
-  collections: [Users, Media, Pages, Themes, Tenants],
+  collections: [Users, Media, Pages, Themes, Tenants, Templates, Redirects, Posts],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
 
@@ -72,7 +75,7 @@ export default buildConfig({
   // --- 4. DAFTARKAN SEMUA PLUGIN DI SINI ---
   plugins: [
     seoPlugin({
-      collections: ['pages'],
+      collections: ['pages', 'posts'],
       uploadsCollection: 'media',
       generateTitle: ({ doc }) => (doc?.title ? `${doc.title} — OPLAY.ID` : 'OPLAY.ID'),
       generateDescription: ({ doc }) =>
@@ -81,7 +84,9 @@ export default buildConfig({
     multiTenantPlugin<Config>({
       collections: {
         pages: {},
+        posts: {},
         media: {},
+        redirects: {},
       },
       tenantsSlug: 'tenants',
       userHasAccessToAllTenants: (user) => isSuperAdmin(user),

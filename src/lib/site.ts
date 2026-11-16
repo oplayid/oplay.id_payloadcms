@@ -1,15 +1,16 @@
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import type { Tenant } from '@/payload-types'
+import { CACHE_TAGS, cacheQuery } from './contentCache'
 import {
   DEFAULT_LOCALE,
   LOCALES,
   getPlatformHost,
+  getPlatformHosts,
   getProtocolForHost,
   getServerURL,
   isLocale,
   isPlatformHost,
-  isPlatformSubdomain,
   joinPath,
   localizePath,
   normalizeHost,
@@ -42,6 +43,7 @@ export const RESERVED_SLUGS = new Set([
   'docs',
   'documentation',
   'en',
+  'event',
   'favicon.ico',
   'files',
   'ftp',
@@ -78,6 +80,40 @@ export const RESERVED_SLUGS = new Set([
   'support',
   'tentang',
   'terms',
+  'to',
+  'undangan',
+  'uploads',
+  'www',
+])
+
+/**
+ * Label subdomain pertama yang tidak boleh dipakai tenant di bawah domain
+ * platform (mis. `admin.oplay.id`, `api.oplay.id`).
+ *
+ * Catatan: `portal` sengaja TIDAK dimasukkan agar `portal.umkm.oplay.id`
+ * tetap boleh dipakai sebagai subdomain situs tenant.
+ */
+export const RESERVED_SUBDOMAINS = new Set([
+  '_next',
+  'admin',
+  'api',
+  'app',
+  'assets',
+  'auth',
+  'cdn',
+  'dashboard',
+  'files',
+  'ftp',
+  'mail',
+  'media',
+  'oauth',
+  'payload',
+  'preview',
+  'register',
+  'signup',
+  'sso',
+  'static',
+  'status',
   'uploads',
   'www',
 ])
@@ -86,6 +122,25 @@ export const TENANT_SLUG_REGEX = /^[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])$/
 
 export function isValidTenantSlug(slug: string | undefined | null): slug is string {
   return Boolean(slug && TENANT_SLUG_REGEX.test(slug) && !RESERVED_SLUGS.has(slug))
+}
+
+/**
+ * Host yang tidak boleh dipakai tenant non-platform: host platform itu sendiri
+ * dan subdomain dengan label pertama yang reserved (`admin.oplay.id`, dst.).
+ */
+export function isReservedPlatformHost(host: string): boolean {
+  const normalized = normalizeHost(host)
+  if (!normalized) return true
+  if (isPlatformHost(normalized)) return true
+
+  for (const platform of getPlatformHosts()) {
+    if (!normalized.endsWith(`.${platform}`)) continue
+    const prefix = normalized.slice(0, -(platform.length + 1))
+    const firstLabel = prefix.split('.')[0]
+    if (firstLabel && RESERVED_SUBDOMAINS.has(firstLabel)) return true
+  }
+
+  return false
 }
 
 export function slugifyTenantName(value: string): string {
@@ -128,6 +183,8 @@ type TenantWithSiteFields = Tenant & {
     isPrimary?: boolean | null
   }> | null
   domain?: string | null
+  exposeSubpath?: boolean | null
+  defaultLayoutMode?: 'inherit' | 'canvas' | 'bare' | null
   favicon?: string | null
   themePreset?: string | null
 }
@@ -191,7 +248,7 @@ export function buildPublicPath(
   return localizePath(pagePath, getTenantBasePath(tenant), locale)
 }
 
-export async function findPlatformTenant(): Promise<TenantWithSiteFields | null> {
+async function queryPlatformTenant(): Promise<TenantWithSiteFields | null> {
   const payload = await getPayload({ config })
 
   const { docs } = await payload.find({
@@ -205,9 +262,7 @@ export async function findPlatformTenant(): Promise<TenantWithSiteFields | null>
   return (docs[0] as TenantWithSiteFields | undefined) || null
 }
 
-export async function findTenantBySlug(slug: string): Promise<TenantWithSiteFields | null> {
-  if (!slug || RESERVED_SLUGS.has(slug)) return null
-
+async function queryTenantBySlug(slug: string): Promise<TenantWithSiteFields | null> {
   const payload = await getPayload({ config })
   const { docs } = await payload.find({
     collection: 'tenants',
@@ -215,6 +270,29 @@ export async function findTenantBySlug(slug: string): Promise<TenantWithSiteFiel
       and: [
         { slug: { equals: slug } },
         { type: { not_equals: 'platform' } },
+        { status: { not_equals: 'suspended' } },
+        // Tenant boleh menonaktifkan akses subpath (mis. klien custom domain)
+        // agar kontennya tidak bocor ke oplay.id/<slug>.
+        { exposeSubpath: { not_equals: false } },
+      ],
+    },
+    limit: 1,
+    depth: 0,
+    overrideAccess: true,
+  })
+
+  return (docs[0] as TenantWithSiteFields | undefined) || null
+}
+
+async function queryTenantByHost(host: string): Promise<TenantWithSiteFields | null> {
+  const payload = await getPayload({ config })
+  const { docs } = await payload.find({
+    collection: 'tenants',
+    where: {
+      and: [
+        {
+          or: [{ 'hosts.host': { equals: host } }, { domain: { equals: host } }],
+        },
         { status: { not_equals: 'suspended' } },
       ],
     },
@@ -226,27 +304,58 @@ export async function findTenantBySlug(slug: string): Promise<TenantWithSiteFiel
   return (docs[0] as TenantWithSiteFields | undefined) || null
 }
 
+async function queryTenantByID(id: string): Promise<TenantWithSiteFields | null> {
+  const payload = await getPayload({ config })
+
+  try {
+    const doc = (await payload.findByID({
+      collection: 'tenants',
+      id,
+      depth: 0,
+      overrideAccess: true,
+    })) as TenantWithSiteFields | null
+
+    return doc || null
+  } catch {
+    return null
+  }
+}
+
+const cachedPlatformTenant = cacheQuery(
+  { key: 'platform-tenant', tags: [CACHE_TAGS.tenants] },
+  queryPlatformTenant,
+)
+
+const cachedTenantBySlug = cacheQuery(
+  { key: 'tenant-by-slug', tags: [CACHE_TAGS.tenants] },
+  queryTenantBySlug,
+)
+
+const cachedTenantByHost = cacheQuery(
+  { key: 'tenant-by-host', tags: [CACHE_TAGS.tenants] },
+  queryTenantByHost,
+)
+
+const cachedTenantByID = cacheQuery({ key: 'tenant-by-id', tags: [CACHE_TAGS.tenants] }, queryTenantByID)
+
+export async function findPlatformTenant(): Promise<TenantWithSiteFields | null> {
+  return cachedPlatformTenant()
+}
+
+export async function findTenantBySlug(slug: string): Promise<TenantWithSiteFields | null> {
+  if (!slug || RESERVED_SLUGS.has(slug)) return null
+  return cachedTenantBySlug(slug)
+}
+
 export async function findTenantByHost(host: string): Promise<TenantWithSiteFields | null> {
   const normalized = normalizeHost(host)
   if (!normalized) return null
+  return cachedTenantByHost(normalized)
+}
 
-  const payload = await getPayload({ config })
-  const { docs } = await payload.find({
-    collection: 'tenants',
-    where: {
-      and: [
-        {
-          or: [{ 'hosts.host': { equals: normalized } }, { domain: { equals: normalized } }],
-        },
-        { status: { not_equals: 'suspended' } },
-      ],
-    },
-    limit: 1,
-    depth: 0,
-    overrideAccess: true,
-  })
-
-  return (docs[0] as TenantWithSiteFields | undefined) || null
+export async function findTenantByID(id: string): Promise<TenantWithSiteFields | null> {
+  if (!id) return null
+  return cachedTenantByID(id)
 }
 
 /**
@@ -307,7 +416,7 @@ export async function resolveSiteContext({
 
   return {
     tenant,
-    access: isPlatformSubdomain(normalizedHost) ? 'domain' : 'domain',
+    access: 'domain',
     locale,
     pageSegments: cleanSegments,
     pagePath: joinPath(...cleanSegments),
