@@ -84,6 +84,8 @@ export const Posts: CollectionConfig = {
 
         const next = { ...(data as Record<string, any>) }
         const original = (originalDoc || {}) as Record<string, any>
+        const effectiveStatus = next._status ?? original._status
+        const isDraft = effectiveStatus === 'draft'
 
         // Normalisasi slug; turunkan dari judul bila kosong.
         if (typeof next.slug === 'string' && next.slug.trim()) {
@@ -105,7 +107,12 @@ export const Posts: CollectionConfig = {
 
         const effectiveSlug = next.slug ?? original.slug
         if (!effectiveSlug) {
-          throw new APIError('Slug artikel wajib diisi.', 400)
+          // Payload membuat draft kosong begitu halaman "Create New" dibuka
+          // (autosave). Draft boleh belum punya judul/slug; validasi hanya
+          // diberlakukan saat artikel dipublikasikan.
+          if (isDraft) return next
+
+          throw new APIError('Judul artikel wajib diisi agar slug dibuat otomatis.', 400)
         }
         if (!isValidSlug(effectiveSlug)) {
           throw new APIError(
@@ -145,7 +152,6 @@ export const Posts: CollectionConfig = {
         }
 
         // Tanggal terbit otomatis saat pertama kali dipublikasikan.
-        const effectiveStatus = next._status ?? original._status
         if (!next.publishedAt && !original.publishedAt && effectiveStatus === 'published') {
           next.publishedAt = new Date().toISOString()
         }
