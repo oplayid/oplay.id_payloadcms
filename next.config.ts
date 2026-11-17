@@ -7,6 +7,10 @@ const __filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(__filename)
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Menandai upgrade keamanan Next.js yang sudah diterapkan (16.4.1 → 16.4.6).
+    agentUpgrade: 'security',
+  },
   // Dibutuhkan oleh Dockerfile (Coolify) yang memakai .next/standalone.
   output: 'standalone',
   allowedDevOrigins: ['umkm.oplay.id'],
