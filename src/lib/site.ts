@@ -1,4 +1,4 @@
-import { getPayload } from 'payload'
+import { getPayload, type Where } from 'payload'
 import config from '@payload-config'
 import type { Tenant } from '@/payload-types'
 import { CACHE_TAGS, cacheQuery } from './contentCache'
@@ -262,20 +262,28 @@ async function queryPlatformTenant(): Promise<TenantWithSiteFields | null> {
   return (docs[0] as TenantWithSiteFields | undefined) || null
 }
 
-async function queryTenantBySlug(slug: string): Promise<TenantWithSiteFields | null> {
+async function queryTenantBySlug(
+  slug: string,
+  opts?: { includeHiddenSubpath?: boolean },
+): Promise<TenantWithSiteFields | null> {
   const payload = await getPayload({ config })
+  const and: Where[] = [
+    { slug: { equals: slug } },
+    { type: { not_equals: 'platform' } },
+    { status: { not_equals: 'suspended' } },
+  ]
+
+  // Tenant boleh menonaktifkan akses subpath (mis. klien custom domain)
+  // agar kontennya tidak bocor ke oplay.id/<slug>. Preview terautentikasi
+  // boleh tetap me-resolve slug ini agar live preview berfungsi di origin
+  // platform (cookie draftMode tidak bisa lintas host).
+  if (!opts?.includeHiddenSubpath) {
+    and.push({ exposeSubpath: { not_equals: false } })
+  }
+
   const { docs } = await payload.find({
     collection: 'tenants',
-    where: {
-      and: [
-        { slug: { equals: slug } },
-        { type: { not_equals: 'platform' } },
-        { status: { not_equals: 'suspended' } },
-        // Tenant boleh menonaktifkan akses subpath (mis. klien custom domain)
-        // agar kontennya tidak bocor ke oplay.id/<slug>.
-        { exposeSubpath: { not_equals: false } },
-      ],
-    },
+    where: { and },
     limit: 1,
     depth: 0,
     overrideAccess: true,
@@ -342,8 +350,16 @@ export async function findPlatformTenant(): Promise<TenantWithSiteFields | null>
   return cachedPlatformTenant()
 }
 
-export async function findTenantBySlug(slug: string): Promise<TenantWithSiteFields | null> {
+export async function findTenantBySlug(
+  slug: string,
+  opts?: { includeHiddenSubpath?: boolean },
+): Promise<TenantWithSiteFields | null> {
   if (!slug || RESERVED_SLUGS.has(slug)) return null
+  if (opts?.includeHiddenSubpath) {
+    // Jangan cache: hanya untuk preview terautentikasi, dan hasilnya tidak
+    // boleh mencemari lookup publik (tenant dengan exposeSubpath=false).
+    return queryTenantBySlug(slug, opts)
+  }
   return cachedTenantBySlug(slug)
 }
 
@@ -370,9 +386,17 @@ export async function findTenantByID(id: string): Promise<TenantWithSiteFields |
 export async function resolveSiteContext({
   host,
   segments,
+  allowHiddenSubpath = false,
 }: {
   host: string | null | undefined
   segments: string[]
+  /**
+   * Izinkan resolusi tenant subpath meski `exposeSubpath` dimatikan.
+   * Dipakai preview terautentikasi agar live preview Pages tetap bisa
+   * berjalan di origin platform (cookie draftMode tidak bisa lintas host),
+   * tanpa membuka akses publik subpath.
+   */
+  allowHiddenSubpath?: boolean
 }): Promise<SiteContext | null> {
   const normalizedHost = normalizeHost(host) || getPlatformHost()
   const { locale, segments: cleanSegments } = splitLocale(segments.filter(Boolean))
@@ -383,7 +407,10 @@ export async function resolveSiteContext({
 
     const first = cleanSegments[0]
     if (first && !RESERVED_SLUGS.has(first)) {
-      const tenantBySlug = await findTenantBySlug(first)
+      let tenantBySlug = await findTenantBySlug(first)
+      if (!tenantBySlug && allowHiddenSubpath) {
+        tenantBySlug = await findTenantBySlug(first, { includeHiddenSubpath: true })
+      }
       if (tenantBySlug) {
         const pageSegments = cleanSegments.slice(1)
         return {

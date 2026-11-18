@@ -230,7 +230,7 @@ export const getRoutableForRequest = cache(
     segments: string[],
     isPreview: boolean,
   ): Promise<RoutableContentData | null> => {
-    const site = await resolveSiteContext({ host, segments })
+    const site = await resolveSiteContext({ host, segments, allowHiddenSubpath: isPreview })
     if (!site) return null
 
     const match = matchRoutableSegments(site.pageSegments)

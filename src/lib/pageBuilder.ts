@@ -244,7 +244,7 @@ export const getPageForRequest = cache(
     segments: string[],
     isPreview: boolean,
   ): Promise<PageLayoutData | null> => {
-    const site = await resolveSiteContext({ host, segments })
+    const site = await resolveSiteContext({ host, segments, allowHiddenSubpath: isPreview })
     if (!site) return null
 
     const page = await findPageForSite({ site, isPreview })

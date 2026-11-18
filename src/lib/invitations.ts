@@ -272,7 +272,7 @@ export async function loadInvitation({
   key?: string | null
   isPreview?: boolean
 }): Promise<InvitationRecord | null> {
-  const site = await resolveSiteContext({ host, segments })
+  const site = await resolveSiteContext({ host, segments, allowHiddenSubpath: isPreview })
   if (!site) return null
 
   const match = matchInvitationSegments(site.pageSegments)
@@ -421,7 +421,7 @@ export const getInvitationForRequest = cache(
     segments: string[],
     isPreview: boolean,
   ): Promise<InvitationContentData | null> => {
-    const site = await resolveSiteContext({ host, segments })
+    const site = await resolveSiteContext({ host, segments, allowHiddenSubpath: isPreview })
     if (!site) return null
 
     const match = matchInvitationSegments(site.pageSegments)
