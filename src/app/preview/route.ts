@@ -48,10 +48,13 @@ export async function GET(req: NextRequest): Promise<Response> {
   const draft = await draftMode()
   draft.enable()
 
+  // Tetap di origin request agar cookie draftMode yang diaktifkan di atas ikut
+  // terbawa pada redirect (lintas host akan menggugurkan cookie).
   const target = new URL(path, url.origin)
-  if (locale && target.pathname === '/') {
-    target.searchParams.set('locale', locale)
-  }
+
+  // `buildPreviewURL` sudah menyertakan locale pada path publik. Sertakan juga
+  // sebagai query agar handler penerima bisa membacanya bila diperlukan.
+  if (locale) target.searchParams.set('locale', locale)
 
   return NextResponse.redirect(target)
 }

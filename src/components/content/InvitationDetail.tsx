@@ -1,4 +1,5 @@
 import CanvasRenderer from '@/components/CanvasRenderer'
+import { getComponentRegistryMap } from '@/components/componentRegistry'
 import type { InvitationContentData } from '@/lib/invitations'
 import InvitationExperience from './InvitationExperience'
 import InvitationViewTracker from './InvitationViewTracker'
@@ -94,6 +95,8 @@ export default function InvitationDetail({ data }: { data: InvitationContentData
     invitation: data.context,
   }
 
+  const components = getComponentRegistryMap()
+
   return (
     <>
       <InvitationViewTracker invitationKey={data.context.key} enabled={!data.isPreview} />
@@ -105,18 +108,23 @@ export default function InvitationDetail({ data }: { data: InvitationContentData
               layoutData={{ ...sharedLayout, canvasBlocks: [gate] }}
               rootElement="div"
               bare
+              components={components}
             />
           }
           detail={
             <CanvasRenderer
               layoutData={{ ...sharedLayout, canvasBlocks: detailBlocks }}
               rootElement="div"
+              components={components}
             />
           }
           showBackButton={!hasHeroBack}
         />
       ) : (
-        <CanvasRenderer layoutData={{ ...sharedLayout, canvasBlocks: blocks }} />
+        <CanvasRenderer
+          layoutData={{ ...sharedLayout, canvasBlocks: blocks }}
+          components={components}
+        />
       )}
     </>
   )

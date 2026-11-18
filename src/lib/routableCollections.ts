@@ -1,5 +1,5 @@
 import type { CollectionSlug } from 'payload'
-import { CACHE_TAGS } from './contentCache'
+import { CACHE_TAGS } from './cacheTags'
 
 /**
  * Registry koleksi yang punya URL publik sendiri ("routable content").

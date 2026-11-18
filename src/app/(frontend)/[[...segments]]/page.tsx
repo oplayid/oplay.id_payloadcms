@@ -7,9 +7,11 @@ import type { Metadata } from 'next'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import CanvasRenderer from '@/components/CanvasRenderer'
+import { getComponentRegistryMap } from '@/components/componentRegistry'
 import SiteShell from '@/components/SiteShell'
 import RoutableDetail from '@/components/content/RoutableDetail'
 import InvitationDetail from '@/components/content/InvitationDetail'
+import PageLivePreview from '@/components/content/PageLivePreview'
 import { getPageForRequest, type PageLayoutData } from '@/lib/pageBuilder'
 import { getRoutableForRequest, type RoutableContentData } from '@/lib/routableContent'
 import { getInvitationForRequest, type InvitationContentData } from '@/lib/invitations'
@@ -209,6 +211,12 @@ export default async function UniversalPage({ params }: Props) {
 
   const { data } = resolved
 
+  // Live Preview resmi (useLivePreview) khusus Pages: konten kanvas & judul
+  // mengikuti perubahan form admin secara realtime, tanpa menunggu autosave.
+  if (data.isPreview) {
+    return <PageLivePreview initialData={data} />
+  }
+
   return (
     <SiteShell
       chrome={data.chrome}
@@ -217,7 +225,7 @@ export default async function UniversalPage({ params }: Props) {
       locale={data.locale}
       isPreview={data.isPreview}
     >
-      <CanvasRenderer layoutData={data} />
+      <CanvasRenderer layoutData={data} components={getComponentRegistryMap()} />
     </SiteShell>
   )
 }
