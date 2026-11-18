@@ -45,6 +45,13 @@ import { galleryLightboxField } from './galleryLightboxField'
 import { accordionDirectoryField } from './accordionDirectoryField'
 import { advancedHtmlField } from './advancedHtmlField'
 import { articleListField } from './articleListField'
+import { invitationCoverField } from './invitationCoverField'
+import { eventHeroField } from './eventHeroField'
+import { eventDetailsField } from './eventDetailsField'
+import { countdownField } from './countdownField'
+import { invitationGalleryField } from './invitationGalleryField'
+import { rsvpFormField } from './rsvpFormField'
+import { giftInfoField } from './giftInfoField'
 
 /**
  * Peta kamus form manual untuk setiap tipe komponen di COMPONENT_REGISTRY.
@@ -80,6 +87,15 @@ const customFieldMap: Record<string, Block> = {
 
   // Konten
   ArticleList: articleListField,
+
+  // Undangan
+  InvitationCover: invitationCoverField,
+  EventHero: eventHeroField,
+  EventDetails: eventDetailsField,
+  Countdown: countdownField,
+  InvitationGallery: invitationGalleryField,
+  RsvpForm: rsvpFormField,
+  GiftInfo: giftInfoField,
 
   // Preset
   FeatureMatrix: featureMatrixField,

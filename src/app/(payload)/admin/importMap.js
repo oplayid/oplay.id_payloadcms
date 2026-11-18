@@ -30,6 +30,10 @@ import { MetaImageComponent as MetaImageComponent_a8a977ebc872c5d5ea7ee689724c08
 import { PreviewComponent as PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { default as default_0e52b52334785c0528f9fdcdd572bac0 } from '@/components/admin/ApplyTemplateField'
 import { WatchTenantCollection as WatchTenantCollection_1d0591e3cf4f332c83a86da13a0de59a } from '@payloadcms/plugin-multi-tenant/client'
+import { default as default_8d4c9f031cc919a7072ea0d91ece695b } from '@/components/admin/InvitationShareField'
+import { default as default_0f517ae7e760220b1fc0b776e3cb8c1f } from '@/components/admin/GuestImportAction'
+import { default as default_921c6c13f8422b277b225b1d581cdfa7 } from '@/components/admin/GuestImportBanner'
+import { default as default_f11d6f572c925ab2b7898de79bcbde45 } from '@/components/admin/GuestImportView'
 import { default as default_e422faeafe96dfbe8492ed16895574e1 } from '@/components/admin/PocketIDButton'
 import { TenantSelector as TenantSelector_d6d5f193a167989e2ee7d14202901e62 } from '@payloadcms/plugin-multi-tenant/rsc'
 import { TenantSelectionProvider as TenantSelectionProvider_d6d5f193a167989e2ee7d14202901e62 } from '@payloadcms/plugin-multi-tenant/rsc'
@@ -70,6 +74,10 @@ export const importMap = {
   "@payloadcms/plugin-seo/client#PreviewComponent": PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "@/components/admin/ApplyTemplateField#default": default_0e52b52334785c0528f9fdcdd572bac0,
   "@payloadcms/plugin-multi-tenant/client#WatchTenantCollection": WatchTenantCollection_1d0591e3cf4f332c83a86da13a0de59a,
+  "@/components/admin/InvitationShareField#default": default_8d4c9f031cc919a7072ea0d91ece695b,
+  "@/components/admin/GuestImportAction#default": default_0f517ae7e760220b1fc0b776e3cb8c1f,
+  "@/components/admin/GuestImportBanner#default": default_921c6c13f8422b277b225b1d581cdfa7,
+  "@/components/admin/GuestImportView#default": default_f11d6f572c925ab2b7898de79bcbde45,
   "@/components/admin/PocketIDButton#default": default_e422faeafe96dfbe8492ed16895574e1,
   "@payloadcms/plugin-multi-tenant/rsc#TenantSelector": TenantSelector_d6d5f193a167989e2ee7d14202901e62,
   "@payloadcms/plugin-multi-tenant/rsc#TenantSelectionProvider": TenantSelectionProvider_d6d5f193a167989e2ee7d14202901e62,

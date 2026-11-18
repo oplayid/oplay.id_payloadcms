@@ -2,6 +2,7 @@ import React from 'react'
 import { getComponentRegistryMap } from './componentRegistry'
 import { siteHref, type Locale } from '@/lib/urls'
 import { buildThemeVariables } from '@/lib/themeStyle'
+import type { InvitationBlockContext } from '@/lib/invitationContext'
 
 /** Konteks situs yang diteruskan ke setiap blok. */
 export type BlockSiteContext = {
@@ -20,7 +21,16 @@ type CanvasRendererProps = {
     layoutMode?: 'inherit' | 'canvas' | 'bare'
     /** ID tenant, dibutuhkan blok yang mengambil data dari koleksi lain. */
     tenantID?: string
+    /** Data tamu/acara; hanya diisi saat merender URL undangan. */
+    invitation?: InvitationBlockContext
   }
+  /**
+   * Elemen akar kanvas. Undangan menaruh dua kanvas bersarang (cover + detail),
+   * jadi memakai `div` agar tidak ada dua `<main>` dalam satu halaman.
+   */
+  rootElement?: 'main' | 'div'
+  /** Hilangkan padding atas/bawah (dipakai cover layar penuh). */
+  bare?: boolean
 }
 
 /**
@@ -46,7 +56,11 @@ function localizeBlockHrefs(value: any, basePath: string, locale: Locale): any {
   return result
 }
 
-export default function CanvasRenderer({ layoutData = {} }: CanvasRendererProps) {
+export default function CanvasRenderer({
+  layoutData = {},
+  rootElement = 'main',
+  bare = false,
+}: CanvasRendererProps) {
   const componentRegistry = getComponentRegistryMap()
 
   // Mendukung tema dari objek langsung ATAU dari preset string Payload
@@ -56,7 +70,9 @@ export default function CanvasRenderer({ layoutData = {} }: CanvasRendererProps)
   const containerClass = theme.layout?.containerClass || 'w-full max-w-5xl space-y-6'
   const layoutMode = layoutData.layoutMode || 'inherit'
   // 'bare' tidak punya navbar, jadi tidak perlu ruang di atas.
-  const topPadding = layoutMode === 'bare' ? 'pt-0' : 'pt-16 md:pt-28'
+  const topPadding = bare ? '' : layoutMode === 'bare' ? 'pt-0' : 'pt-16 md:pt-28'
+  const bottomPadding = bare ? '' : 'pb-12'
+  const Root = rootElement
   const canvasBlocks = localizeBlockHrefs(
     layoutData.canvasBlocks || [],
     layoutData.basePath || '',
@@ -73,7 +89,7 @@ export default function CanvasRenderer({ layoutData = {} }: CanvasRendererProps)
     : undefined
 
   return (
-    <main
+    <Root
       style={
         {
           ...dynamicThemeStyle,
@@ -81,7 +97,7 @@ export default function CanvasRenderer({ layoutData = {} }: CanvasRendererProps)
           containerName: 'canvas_viewport',
         } as React.CSSProperties
       }
-      className={`w-full max-w-full box-border bg-(--theme-bg) text-(--theme-text) flex flex-col items-center ${topPadding} pb-12 transition-colors duration-300 overflow-x-hidden`}
+      className={`w-full max-w-full box-border bg-(--theme-bg) text-(--theme-text) flex flex-col items-center ${topPadding} ${bottomPadding} transition-colors duration-300 overflow-x-hidden`}
     >
       {canvasBlocks.map((block: any, index: number) => {
         // Payload CMS menggunakan block.blockType, kita berikan fallback ke block.type
@@ -96,7 +112,9 @@ export default function CanvasRenderer({ layoutData = {} }: CanvasRendererProps)
         const isHero =
           blockType === 'HeroBanner' ||
           blockType === 'Hero' ||
-          blockType === 'AdvancedHTML'
+          blockType === 'EventHero' ||
+          blockType === 'AdvancedHTML' ||
+          blockType === 'InvitationCover'
         const scrollStyle = { scrollMarginTop: '120px' }
         const blockThemeLayout =
           block.themeLayout ||
@@ -123,6 +141,7 @@ export default function CanvasRenderer({ layoutData = {} }: CanvasRendererProps)
                 }}
                 themeLayout={blockThemeLayout}
                 siteContext={siteContext}
+                invitationContext={layoutData.invitation}
               />
             </div>
           )
@@ -143,10 +162,11 @@ export default function CanvasRenderer({ layoutData = {} }: CanvasRendererProps)
               }}
               themeLayout={blockThemeLayout}
               siteContext={siteContext}
+              invitationContext={layoutData.invitation}
             />
           </div>
         )
       })}
-    </main>
+    </Root>
   )
 }

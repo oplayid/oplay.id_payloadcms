@@ -9,8 +9,10 @@ import config from '@payload-config'
 import CanvasRenderer from '@/components/CanvasRenderer'
 import SiteShell from '@/components/SiteShell'
 import RoutableDetail from '@/components/content/RoutableDetail'
+import InvitationDetail from '@/components/content/InvitationDetail'
 import { getPageForRequest, type PageLayoutData } from '@/lib/pageBuilder'
 import { getRoutableForRequest, type RoutableContentData } from '@/lib/routableContent'
+import { getInvitationForRequest, type InvitationContentData } from '@/lib/invitations'
 import { getRedirectURL } from '@/lib/redirects'
 import { getServerURL, localizePath } from '@/lib/urls'
 import { userHasTenantAccess } from '@/access'
@@ -24,6 +26,7 @@ type Props = {
 
 type ResolvedRequest =
   | { kind: 'page'; data: PageLayoutData }
+  | { kind: 'invitation'; data: InvitationContentData }
   | { kind: 'content'; data: RoutableContentData }
   | null
 
@@ -50,14 +53,18 @@ async function getRequestState() {
 }
 
 /**
- * Satu request bisa berupa halaman blok (`Pages`) atau konten routable
- * (artikel). Halaman menang bila path-nya sama, sehingga editor tetap bisa
- * membuat halaman statis di atas prefix konten.
+ * Satu request bisa berupa halaman blok (`Pages`), undangan tamu
+ * (`/undangan/<nama>-<kode>`), atau konten routable (artikel). Halaman menang
+ * bila path-nya sama, sehingga editor tetap bisa membuat halaman statis di
+ * atas prefix konten.
  */
 const resolveRequest = cache(
   async (host: string, segments: string[], isPreview: boolean): Promise<ResolvedRequest> => {
     const page = await getPageForRequest(host, segments, isPreview)
     if (page) return { kind: 'page', data: page }
+
+    const invitation = await getInvitationForRequest(host, segments, isPreview)
+    if (invitation) return { kind: 'invitation', data: invitation }
 
     const content = await getRoutableForRequest(host, segments, isPreview)
     if (content) return { kind: 'content', data: content }
@@ -110,7 +117,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         : undefined
 
   const tenantSEO = (info.tenant as { seo?: { noIndex?: boolean | null } | null }).seo
-  const noIndex = isPreview || Boolean(tenantSEO?.noIndex)
+  // Undangan selalu noindex: berisi nama tamu dan URL pribadi.
+  const noIndex =
+    resolved?.kind === 'invitation' || isPreview || Boolean(tenantSEO?.noIndex)
 
   return {
     metadataBase: new URL(getServerURL()),
@@ -162,6 +171,26 @@ export default async function UniversalPage({ params }: Props) {
   if (resolved.kind === 'content' && resolved.data.needsCanonicalRedirect) {
     const { data } = resolved
     permanentRedirect(localizePath(data.contentPath, data.basePath, data.locale))
+  }
+
+  // Tamu yang membuka /undangan/<kode> diarahkan ke linkSlug canonical.
+  if (resolved.kind === 'invitation' && resolved.data.needsCanonicalRedirect) {
+    const { data } = resolved
+    permanentRedirect(localizePath(data.contentPath, data.basePath, data.locale))
+  }
+
+  if (resolved.kind === 'invitation') {
+    return (
+      <SiteShell
+        chrome={resolved.data.chrome}
+        layoutMode={resolved.data.layoutMode}
+        basePath={resolved.data.basePath}
+        locale={resolved.data.locale}
+        isPreview={resolved.data.isPreview}
+      >
+        <InvitationDetail data={resolved.data} />
+      </SiteShell>
+    )
   }
 
   if (resolved.kind === 'content') {

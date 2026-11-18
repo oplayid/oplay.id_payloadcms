@@ -15,6 +15,10 @@ export const CACHE_TAGS = {
    * di `lib/routableCollections`). Tag dipakai untuk cache detail + listing.
    */
   posts: 'posts',
+  /** Acara undangan (judul, tanggal, lokasi, halaman desain). */
+  events: 'events',
+  /** Tamu undangan + status RSVP. */
+  invitations: 'invitations',
 } as const
 
 /**

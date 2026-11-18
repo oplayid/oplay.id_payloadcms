@@ -75,6 +75,8 @@ export interface Config {
     templates: Template;
     redirects: Redirect;
     posts: Post;
+    events: Event;
+    guests: Guest;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -90,6 +92,8 @@ export interface Config {
     templates: TemplatesSelect<false> | TemplatesSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
+    events: EventsSelect<false> | EventsSelect<true>;
+    guests: GuestsSelect<false> | GuestsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -1230,6 +1234,144 @@ export interface Page {
             id?: string | null;
             blockName?: string | null;
             blockType: 'ArticleList';
+          }
+        | {
+            variant?: ('cover-photo' | 'cover-classic' | 'cover-minimal') | null;
+            eyebrow?: string | null;
+            /**
+             * Kosongkan untuk memakai gambar cover acara.
+             */
+            backgroundImage?: (string | null) | Media;
+            overlayOpacity?: number | null;
+            showEventTitle?: boolean | null;
+            eventTitleOverride?: string | null;
+            showDate?: boolean | null;
+            showGuestName?: boolean | null;
+            guestLabel?: string | null;
+            showPax?: boolean | null;
+            showPersonalNote?: boolean | null;
+            personalNoteLabel?: string | null;
+            showCountdown?: boolean | null;
+            countdownLabel?: string | null;
+            openButtonLabel?: string | null;
+            note?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'InvitationCover';
+          }
+        | {
+            variant?: ('hero-arch' | 'hero-photo' | 'hero-minimal') | null;
+            eyebrow?: string | null;
+            titleOverride?: string | null;
+            /**
+             * Kosongkan untuk memakai gambar cover acara.
+             */
+            backgroundImage?: (string | null) | Media;
+            overlayOpacity?: number | null;
+            showDate?: boolean | null;
+            showTime?: boolean | null;
+            showVenue?: boolean | null;
+            showOpeningMessage?: boolean | null;
+            /**
+             * Kosongkan untuk memakai pesan pembuka dari data acara.
+             */
+            openingMessageOverride?: string | null;
+            scrollHint?: string | null;
+            note?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'EventHero';
+          }
+        | {
+            variant?: ('details-cards' | 'details-list' | 'details-minimal') | null;
+            sectionBadge?: string | null;
+            sectionTitle?: string | null;
+            sectionSubtitle?: string | null;
+            showDate?: boolean | null;
+            showTime?: boolean | null;
+            showVenue?: boolean | null;
+            showMaps?: boolean | null;
+            mapsButtonLabel?: string | null;
+            showDressCode?: boolean | null;
+            showHost?: boolean | null;
+            showRundown?: boolean | null;
+            rundownTitle?: string | null;
+            note?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'EventDetails';
+          }
+        | {
+            variant?: ('countdown-cards' | 'countdown-inline') | null;
+            sectionBadge?: string | null;
+            sectionTitle?: string | null;
+            sectionSubtitle?: string | null;
+            showDate?: boolean | null;
+            finishedLabel?: string | null;
+            note?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'Countdown';
+          }
+        | {
+            variant?: ('gallery-grid' | 'gallery-masonry' | 'gallery-carousel') | null;
+            sectionBadge?: string | null;
+            sectionTitle?: string | null;
+            sectionSubtitle?: string | null;
+            /**
+             * Foto di sini tampil lebih dulu, lalu diikuti galeri foto acara.
+             */
+            images?:
+              | {
+                  image: string | Media;
+                  caption?: string | null;
+                  id?: string | null;
+                }[]
+              | null;
+            captionStyle?: ('overlay' | 'below' | 'hidden') | null;
+            note?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'InvitationGallery';
+          }
+        | {
+            variant?: ('rsvp-card' | 'rsvp-plain') | null;
+            sectionBadge?: string | null;
+            sectionTitle?: string | null;
+            /**
+             * Contoh: "Mohon konfirmasi sebelum 1 Desember 2026 agar kami siapkan kursi terbaik."
+             */
+            sectionSubtitle?: string | null;
+            submitLabel?: string | null;
+            successMessage?: string | null;
+            closedMessage?: string | null;
+            showPax?: boolean | null;
+            showMessage?: boolean | null;
+            messageLabel?: string | null;
+            note?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'RsvpForm';
+          }
+        | {
+            variant?: ('gift-cards' | 'gift-list') | null;
+            sectionBadge?: string | null;
+            sectionTitle?: string | null;
+            /**
+             * Contoh: "Doa restu Anda adalah hadiah terbaik. Bila ingin memberi tanda kasih, berikut informasinya."
+             */
+            sectionSubtitle?: string | null;
+            showAccounts?: boolean | null;
+            copyLabel?: string | null;
+            showGiftAddress?: boolean | null;
+            /**
+             * Kosongkan untuk memakai alamat dari dokumen acara.
+             */
+            giftAddressOverride?: string | null;
+            note?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'GiftInfo';
           }
         | {
             /**
@@ -2438,6 +2580,144 @@ export interface Template {
                   blockType: 'ArticleList';
                 }
               | {
+                  variant?: ('cover-photo' | 'cover-classic' | 'cover-minimal') | null;
+                  eyebrow?: string | null;
+                  /**
+                   * Kosongkan untuk memakai gambar cover acara.
+                   */
+                  backgroundImage?: (string | null) | Media;
+                  overlayOpacity?: number | null;
+                  showEventTitle?: boolean | null;
+                  eventTitleOverride?: string | null;
+                  showDate?: boolean | null;
+                  showGuestName?: boolean | null;
+                  guestLabel?: string | null;
+                  showPax?: boolean | null;
+                  showPersonalNote?: boolean | null;
+                  personalNoteLabel?: string | null;
+                  showCountdown?: boolean | null;
+                  countdownLabel?: string | null;
+                  openButtonLabel?: string | null;
+                  note?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'InvitationCover';
+                }
+              | {
+                  variant?: ('hero-arch' | 'hero-photo' | 'hero-minimal') | null;
+                  eyebrow?: string | null;
+                  titleOverride?: string | null;
+                  /**
+                   * Kosongkan untuk memakai gambar cover acara.
+                   */
+                  backgroundImage?: (string | null) | Media;
+                  overlayOpacity?: number | null;
+                  showDate?: boolean | null;
+                  showTime?: boolean | null;
+                  showVenue?: boolean | null;
+                  showOpeningMessage?: boolean | null;
+                  /**
+                   * Kosongkan untuk memakai pesan pembuka dari data acara.
+                   */
+                  openingMessageOverride?: string | null;
+                  scrollHint?: string | null;
+                  note?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'EventHero';
+                }
+              | {
+                  variant?: ('details-cards' | 'details-list' | 'details-minimal') | null;
+                  sectionBadge?: string | null;
+                  sectionTitle?: string | null;
+                  sectionSubtitle?: string | null;
+                  showDate?: boolean | null;
+                  showTime?: boolean | null;
+                  showVenue?: boolean | null;
+                  showMaps?: boolean | null;
+                  mapsButtonLabel?: string | null;
+                  showDressCode?: boolean | null;
+                  showHost?: boolean | null;
+                  showRundown?: boolean | null;
+                  rundownTitle?: string | null;
+                  note?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'EventDetails';
+                }
+              | {
+                  variant?: ('countdown-cards' | 'countdown-inline') | null;
+                  sectionBadge?: string | null;
+                  sectionTitle?: string | null;
+                  sectionSubtitle?: string | null;
+                  showDate?: boolean | null;
+                  finishedLabel?: string | null;
+                  note?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'Countdown';
+                }
+              | {
+                  variant?: ('gallery-grid' | 'gallery-masonry' | 'gallery-carousel') | null;
+                  sectionBadge?: string | null;
+                  sectionTitle?: string | null;
+                  sectionSubtitle?: string | null;
+                  /**
+                   * Foto di sini tampil lebih dulu, lalu diikuti galeri foto acara.
+                   */
+                  images?:
+                    | {
+                        image: string | Media;
+                        caption?: string | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  captionStyle?: ('overlay' | 'below' | 'hidden') | null;
+                  note?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'InvitationGallery';
+                }
+              | {
+                  variant?: ('rsvp-card' | 'rsvp-plain') | null;
+                  sectionBadge?: string | null;
+                  sectionTitle?: string | null;
+                  /**
+                   * Contoh: "Mohon konfirmasi sebelum 1 Desember 2026 agar kami siapkan kursi terbaik."
+                   */
+                  sectionSubtitle?: string | null;
+                  submitLabel?: string | null;
+                  successMessage?: string | null;
+                  closedMessage?: string | null;
+                  showPax?: boolean | null;
+                  showMessage?: boolean | null;
+                  messageLabel?: string | null;
+                  note?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'RsvpForm';
+                }
+              | {
+                  variant?: ('gift-cards' | 'gift-list') | null;
+                  sectionBadge?: string | null;
+                  sectionTitle?: string | null;
+                  /**
+                   * Contoh: "Doa restu Anda adalah hadiah terbaik. Bila ingin memberi tanda kasih, berikut informasinya."
+                   */
+                  sectionSubtitle?: string | null;
+                  showAccounts?: boolean | null;
+                  copyLabel?: string | null;
+                  showGiftAddress?: boolean | null;
+                  /**
+                   * Kosongkan untuk memakai alamat dari dokumen acara.
+                   */
+                  giftAddressOverride?: string | null;
+                  note?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'GiftInfo';
+                }
+              | {
                   /**
                    * Markup mentah. Ditempel apa adanya ke dalam halaman.
                    */
@@ -2488,6 +2768,172 @@ export interface Redirect {
    * Opsional, mis. alasan redirect atau sumber tautan lama.
    */
   note?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Data acara + halaman desain undangan. Setelah acara dibuat, tambahkan tamu di menu "Tamu Undangan".
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "events".
+ */
+export interface Event {
+  id: string;
+  tenant?: (string | null) | Tenant;
+  /**
+   * Contoh: "Pernikahan Budi & Ani" atau "Syukuran Rumah Baru".
+   */
+  title: string;
+  /**
+   * Dipakai untuk membedakan acara di admin. Kosongkan untuk dibuat otomatis dari nama acara.
+   */
+  slug?: string | null;
+  dateStart: string;
+  dateEnd?: string | null;
+  timezone?: ('Asia/Jakarta' | 'Asia/Makassar' | 'Asia/Jayapura' | 'Asia/Singapore' | 'UTC') | null;
+  venueName?: string | null;
+  address?: string | null;
+  /**
+   * Kosongkan agar tombol Maps otomatis mencari dari nama tempat + alamat.
+   */
+  mapsURL?: string | null;
+  /**
+   * Dipakai blok cover bila blok tidak memilih gambar sendiri.
+   */
+  cover?: (string | null) | Media;
+  /**
+   * Tampil di cover atau blok undangan yang memakai pesan acara.
+   */
+  openingMessage?: string | null;
+  /**
+   * Halaman (Pages) yang blok-bloknya dipakai sebagai desain undangan. Halaman ini tetap dirender per tamu dengan data tamu yang sesuai.
+   */
+  invitationPage?: (string | null) | Page;
+  hostName?: string | null;
+  /**
+   * Format internasional, contoh 6281234567890.
+   */
+  hostContact?: string | null;
+  dressCode?: string | null;
+  /**
+   * Konfirmasi ditutup setelah tanggal ini (akhir hari, zona waktu acara).
+   */
+  rsvpDeadline?: string | null;
+  allowRsvp?: boolean | null;
+  /**
+   * Dipakai sebagai nilai awal saat menambah tamu baru.
+   */
+  defaultPax?: number | null;
+  rundown?:
+    | {
+        /**
+         * Contoh: 09.00
+         */
+        time?: string | null;
+        title: string;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Tampil di blok "Hadiah & Angpao". Boleh dikosongkan bila tidak menerima hadiah digital.
+   */
+  gifts?:
+    | {
+        /**
+         * Contoh: Hadiah Pernikahan, Angpao Digital
+         */
+        label?: string | null;
+        bankName: string;
+        accountNumber: string;
+        accountName: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Untuk tamu yang ingin mengirim hadiah fisik.
+   */
+  giftAddress?: string | null;
+  /**
+   * Dipakai blok "Galeri Undangan". Boleh dikosongkan; blok galeri juga bisa memilih foto sendiri.
+   */
+  gallery?:
+    | {
+        image: string | Media;
+        caption?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  meta?: {
+    title?: string | null;
+    description?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (string | null) | Media;
+  };
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * Setiap tamu punya link undangan pribadi. Salin link lewat panel "Bagikan Undangan" di sidebar.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "guests".
+ */
+export interface Guest {
+  id: string;
+  tenant?: (string | null) | Tenant;
+  /**
+   * Tampil di halaman undangan. Link tidak berubah bila nama diedit setelah tamu dibuat.
+   */
+  name: string;
+  event: string | Event;
+  /**
+   * Contoh: Bapak, Ibu, Saudara, Keluarga. Boleh dikosongkan.
+   */
+  salutation?: string | null;
+  /**
+   * Contoh: Keluarga, Kantor, Teman. Membantu pengelompokan.
+   */
+  category?: string | null;
+  /**
+   * Dipakai tombol "Bagikan via WhatsApp". Format 628xxxxxxxxxx.
+   */
+  phone?: string | null;
+  email?: string | null;
+  /**
+   * Batas maksimal tamu yang boleh dikonfirmasi lewat RSVP.
+   */
+  pax?: number | null;
+  /**
+   * Opsional. Tampil di cover undangan bila blok cover mengaktifkannya.
+   */
+  personalNote?: string | null;
+  /**
+   * Dibuat otomatis dan tidak berubah.
+   */
+  linkSlug?: string | null;
+  /**
+   * Kode pendek untuk QR / check-in. Bisa juga dipakai sebagai alias URL.
+   */
+  invitationCode?: string | null;
+  /**
+   * Aktif: tamu melihat 404 dan tidak bisa RSVP.
+   */
+  disabled?: boolean | null;
+  rsvpStatus?: ('pending' | 'attending' | 'not_attending') | null;
+  rsvpPax?: number | null;
+  rsvpMessage?: string | null;
+  rsvpAt?: string | null;
+  /**
+   * Diisi saat tamu check-in di lokasi acara.
+   */
+  checkedInAt?: string | null;
+  sentAt?: string | null;
+  lastViewedAt?: string | null;
+  viewCount?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -2546,6 +2992,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'posts';
         value: string | Post;
+      } | null)
+    | ({
+        relationTo: 'events';
+        value: string | Event;
+      } | null)
+    | ({
+        relationTo: 'guests';
+        value: string | Guest;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -3451,6 +3905,130 @@ export interface PagesSelect<T extends boolean = true> {
               showExcerpt?: T;
               showDate?: T;
               emptyMessage?: T;
+              id?: T;
+              blockName?: T;
+            };
+        InvitationCover?:
+          | T
+          | {
+              variant?: T;
+              eyebrow?: T;
+              backgroundImage?: T;
+              overlayOpacity?: T;
+              showEventTitle?: T;
+              eventTitleOverride?: T;
+              showDate?: T;
+              showGuestName?: T;
+              guestLabel?: T;
+              showPax?: T;
+              showPersonalNote?: T;
+              personalNoteLabel?: T;
+              showCountdown?: T;
+              countdownLabel?: T;
+              openButtonLabel?: T;
+              note?: T;
+              id?: T;
+              blockName?: T;
+            };
+        EventHero?:
+          | T
+          | {
+              variant?: T;
+              eyebrow?: T;
+              titleOverride?: T;
+              backgroundImage?: T;
+              overlayOpacity?: T;
+              showDate?: T;
+              showTime?: T;
+              showVenue?: T;
+              showOpeningMessage?: T;
+              openingMessageOverride?: T;
+              scrollHint?: T;
+              note?: T;
+              id?: T;
+              blockName?: T;
+            };
+        EventDetails?:
+          | T
+          | {
+              variant?: T;
+              sectionBadge?: T;
+              sectionTitle?: T;
+              sectionSubtitle?: T;
+              showDate?: T;
+              showTime?: T;
+              showVenue?: T;
+              showMaps?: T;
+              mapsButtonLabel?: T;
+              showDressCode?: T;
+              showHost?: T;
+              showRundown?: T;
+              rundownTitle?: T;
+              note?: T;
+              id?: T;
+              blockName?: T;
+            };
+        Countdown?:
+          | T
+          | {
+              variant?: T;
+              sectionBadge?: T;
+              sectionTitle?: T;
+              sectionSubtitle?: T;
+              showDate?: T;
+              finishedLabel?: T;
+              note?: T;
+              id?: T;
+              blockName?: T;
+            };
+        InvitationGallery?:
+          | T
+          | {
+              variant?: T;
+              sectionBadge?: T;
+              sectionTitle?: T;
+              sectionSubtitle?: T;
+              images?:
+                | T
+                | {
+                    image?: T;
+                    caption?: T;
+                    id?: T;
+                  };
+              captionStyle?: T;
+              note?: T;
+              id?: T;
+              blockName?: T;
+            };
+        RsvpForm?:
+          | T
+          | {
+              variant?: T;
+              sectionBadge?: T;
+              sectionTitle?: T;
+              sectionSubtitle?: T;
+              submitLabel?: T;
+              successMessage?: T;
+              closedMessage?: T;
+              showPax?: T;
+              showMessage?: T;
+              messageLabel?: T;
+              note?: T;
+              id?: T;
+              blockName?: T;
+            };
+        GiftInfo?:
+          | T
+          | {
+              variant?: T;
+              sectionBadge?: T;
+              sectionTitle?: T;
+              sectionSubtitle?: T;
+              showAccounts?: T;
+              copyLabel?: T;
+              showGiftAddress?: T;
+              giftAddressOverride?: T;
+              note?: T;
               id?: T;
               blockName?: T;
             };
@@ -4440,6 +5018,130 @@ export interface TemplatesSelect<T extends boolean = true> {
                     id?: T;
                     blockName?: T;
                   };
+              InvitationCover?:
+                | T
+                | {
+                    variant?: T;
+                    eyebrow?: T;
+                    backgroundImage?: T;
+                    overlayOpacity?: T;
+                    showEventTitle?: T;
+                    eventTitleOverride?: T;
+                    showDate?: T;
+                    showGuestName?: T;
+                    guestLabel?: T;
+                    showPax?: T;
+                    showPersonalNote?: T;
+                    personalNoteLabel?: T;
+                    showCountdown?: T;
+                    countdownLabel?: T;
+                    openButtonLabel?: T;
+                    note?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              EventHero?:
+                | T
+                | {
+                    variant?: T;
+                    eyebrow?: T;
+                    titleOverride?: T;
+                    backgroundImage?: T;
+                    overlayOpacity?: T;
+                    showDate?: T;
+                    showTime?: T;
+                    showVenue?: T;
+                    showOpeningMessage?: T;
+                    openingMessageOverride?: T;
+                    scrollHint?: T;
+                    note?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              EventDetails?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    showDate?: T;
+                    showTime?: T;
+                    showVenue?: T;
+                    showMaps?: T;
+                    mapsButtonLabel?: T;
+                    showDressCode?: T;
+                    showHost?: T;
+                    showRundown?: T;
+                    rundownTitle?: T;
+                    note?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              Countdown?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    showDate?: T;
+                    finishedLabel?: T;
+                    note?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              InvitationGallery?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    images?:
+                      | T
+                      | {
+                          image?: T;
+                          caption?: T;
+                          id?: T;
+                        };
+                    captionStyle?: T;
+                    note?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              RsvpForm?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    submitLabel?: T;
+                    successMessage?: T;
+                    closedMessage?: T;
+                    showPax?: T;
+                    showMessage?: T;
+                    messageLabel?: T;
+                    note?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              GiftInfo?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    showAccounts?: T;
+                    copyLabel?: T;
+                    showGiftAddress?: T;
+                    giftAddressOverride?: T;
+                    note?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
               AdvancedHTML?:
                 | T
                 | {
@@ -4493,6 +5195,93 @@ export interface PostsSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "events_select".
+ */
+export interface EventsSelect<T extends boolean = true> {
+  tenant?: T;
+  title?: T;
+  slug?: T;
+  dateStart?: T;
+  dateEnd?: T;
+  timezone?: T;
+  venueName?: T;
+  address?: T;
+  mapsURL?: T;
+  cover?: T;
+  openingMessage?: T;
+  invitationPage?: T;
+  hostName?: T;
+  hostContact?: T;
+  dressCode?: T;
+  rsvpDeadline?: T;
+  allowRsvp?: T;
+  defaultPax?: T;
+  rundown?:
+    | T
+    | {
+        time?: T;
+        title?: T;
+        description?: T;
+        id?: T;
+      };
+  gifts?:
+    | T
+    | {
+        label?: T;
+        bankName?: T;
+        accountNumber?: T;
+        accountName?: T;
+        id?: T;
+      };
+  giftAddress?: T;
+  gallery?:
+    | T
+    | {
+        image?: T;
+        caption?: T;
+        id?: T;
+      };
+  meta?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "guests_select".
+ */
+export interface GuestsSelect<T extends boolean = true> {
+  tenant?: T;
+  name?: T;
+  event?: T;
+  salutation?: T;
+  category?: T;
+  phone?: T;
+  email?: T;
+  pax?: T;
+  personalNote?: T;
+  linkSlug?: T;
+  invitationCode?: T;
+  disabled?: T;
+  rsvpStatus?: T;
+  rsvpPax?: T;
+  rsvpMessage?: T;
+  rsvpAt?: T;
+  checkedInAt?: T;
+  sentAt?: T;
+  lastViewedAt?: T;
+  viewCount?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

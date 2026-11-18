@@ -65,6 +65,25 @@ export function tenantScopeForUser(
 export const tenantScope: Access = ({ req }) =>
   tenantScopeForUser(req.user as User | null)
 
+/**
+ * Query pembatas dokumen yang punya field relasi `tenant` (events, guests, ...).
+ * Berbeda dengan `tenantScopeForUser` yang membatasi dokumen koleksi `tenants`.
+ */
+export function tenantContentScopeForUser(
+  user: User | null | undefined,
+): true | false | { tenant: { in: string[] } } {
+  if (!user) return false
+  if (isSuperAdmin(user)) return true
+
+  const ids = getUserTenantIDs(user)
+  if (ids.length === 0) return false
+
+  return { tenant: { in: ids } }
+}
+
+export const tenantContentScope: Access = ({ req }) =>
+  tenantContentScopeForUser(req.user as User | null)
+
 export const authenticated: Access = ({ req }) => Boolean(req.user)
 
 export const superAdminFieldOnly: FieldAccess = ({ req }) =>

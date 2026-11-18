@@ -43,6 +43,13 @@ import AppleInteractiveShowcaseBlock from '@/components/bio/AppleInteractiveShow
 import AppleVideoScrubBlock from '@/components/bio/AppleVideoScrubBlock'
 import AdvancedHTMLBlock from '@/components/blocks/AdvancedHTMLBlock'
 import ArticleListBlock from './blocks/ArticleListBlock'
+import InvitationCoverBlock from './blocks/invitation/InvitationCoverBlock'
+import EventHeroBlock from './blocks/invitation/EventHeroBlock'
+import EventDetailsBlock from './blocks/invitation/EventDetailsBlock'
+import CountdownBlock from './blocks/invitation/CountdownBlock'
+import InvitationGalleryBlock from './blocks/invitation/InvitationGalleryBlock'
+import RsvpFormBlock from './blocks/invitation/RsvpFormBlock'
+import GiftInfoBlock from './blocks/invitation/GiftInfoBlock'
 
 export type ComponentDefinition = {
   type: string
@@ -393,6 +400,50 @@ export const COMPONENT_REGISTRY: ComponentDefinition[] = [
       'article-featured',
       'article-compact',
     ],
+  },
+
+  // --- UNDANGAN ---
+  {
+    type: 'InvitationCover',
+    category: 'Undangan',
+    component: InvitationCoverBlock,
+    variants: ['cover-photo', 'cover-classic', 'cover-minimal'],
+  },
+  {
+    type: 'EventHero',
+    category: 'Undangan',
+    component: EventHeroBlock,
+    variants: ['hero-arch', 'hero-photo', 'hero-minimal'],
+  },
+  {
+    type: 'EventDetails',
+    category: 'Undangan',
+    component: EventDetailsBlock,
+    variants: ['details-cards', 'details-list', 'details-minimal'],
+  },
+  {
+    type: 'Countdown',
+    category: 'Undangan',
+    component: CountdownBlock,
+    variants: ['countdown-cards', 'countdown-inline'],
+  },
+  {
+    type: 'InvitationGallery',
+    category: 'Undangan',
+    component: InvitationGalleryBlock,
+    variants: ['gallery-grid', 'gallery-masonry', 'gallery-carousel'],
+  },
+  {
+    type: 'RsvpForm',
+    category: 'Undangan',
+    component: RsvpFormBlock,
+    variants: ['rsvp-card', 'rsvp-plain'],
+  },
+  {
+    type: 'GiftInfo',
+    category: 'Undangan',
+    component: GiftInfoBlock,
+    variants: ['gift-cards', 'gift-list'],
   },
 
   // --- KEBEBASAN PENUH (KHUSUS SUPERADMIN) ---
