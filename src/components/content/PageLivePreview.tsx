@@ -143,6 +143,7 @@ export default function PageLivePreview({ initialData }: { initialData: PageLayo
       layoutMode={merged.layoutMode}
       basePath={initialData.basePath}
       locale={initialData.locale}
+      theme={liveTheme as PageLayoutData['theme']}
       isPreview
     >
       <CanvasRenderer layoutData={merged} components={components} />

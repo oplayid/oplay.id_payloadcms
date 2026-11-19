@@ -13,6 +13,10 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # Nilai ini di-inline Next.js saat build. Set sebagai repository variable
+  # (Settings → Secrets and variables → Variables), mis. https://oplay.id.
+  NEXT_PUBLIC_SERVER_URL: ${{ vars.NEXT_PUBLIC_SERVER_URL || 'https://oplay.id' }}
+  R2_PUBLIC_URL: ${{ vars.R2_PUBLIC_URL || 'https://storage.assets.oplay.id' }}
 
 jobs:
   build-and-push:
@@ -57,3 +61,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
+          build-args: |
+            NEXT_PUBLIC_SERVER_URL=${{ env.NEXT_PUBLIC_SERVER_URL }}
+            R2_PUBLIC_URL=${{ env.R2_PUBLIC_URL }}

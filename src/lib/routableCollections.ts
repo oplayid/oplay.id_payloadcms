@@ -47,6 +47,16 @@ export const ROUTABLE_COLLECTIONS: RoutableCollectionConfig[] = [
     maxListing: 24,
     defaultSort: '-publishedAt',
   },
+  {
+    collection: 'members',
+    label: 'Anggota',
+    prefixes: ['anggota', 'tim'],
+    slugField: 'slug',
+    titleField: 'name',
+    cacheTag: CACHE_TAGS.members,
+    maxListing: 48,
+    defaultSort: 'order',
+  },
 ]
 
 export function getRoutableConfig(

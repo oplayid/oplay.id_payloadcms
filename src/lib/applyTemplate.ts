@@ -1,5 +1,6 @@
 import type { Payload, PayloadRequest } from 'payload'
 import type { Tenant } from '@/payload-types'
+import { isSuperAdmin } from '@/access'
 
 /**
  * Menyalin isi sebuah template ke tenant: halaman, navbar, footer, dan tema.
@@ -24,7 +25,7 @@ export type TemplateLike = {
   id: string
   name?: string | null
   slug?: string | null
-  themePreset?: string | { id: string } | null
+  themePreset?: string | { id: string; slug?: string | null } | null
   defaultLayoutMode?: 'inherit' | 'canvas' | 'bare' | null
   navigation?: Record<string, unknown> | null
   footer?: Record<string, unknown> | null
@@ -220,6 +221,21 @@ export async function applyTemplateToTenant({
           ? page.layoutMode
           : template.defaultLayoutMode || undefined
 
+      const strippedBlocks = (stripIds(page.blocks || []) as unknown[]) || []
+      // Blok AdvancedHTML mengeksekusi HTML/JS mentah. Template umumnya dibuat
+      // superadmin, tetapi tenant user juga bisa menekan "Terapkan template".
+      // Jadi blok itu hanya dipertahankan bila peminta memang superadmin;
+      // untuk user lain dibuang sebelum create (guard Pages tetap aktif).
+      const requesterIsSuperAdmin = isSuperAdmin(req?.user as never)
+      const safeBlocks = requesterIsSuperAdmin
+        ? strippedBlocks
+        : strippedBlocks.filter(
+            (block) =>
+              !block ||
+              typeof block !== 'object' ||
+              (block as { blockType?: string | null }).blockType !== 'AdvancedHTML',
+          )
+
       const created = await payload.create({
         collection: 'pages',
         data: {
@@ -229,13 +245,16 @@ export async function applyTemplateToTenant({
           _status: 'published',
           ...(layoutMode ? { layoutMode } : {}),
           ...(parentID ? { parent: parentID } : {}),
-          canvasBlocks: stripIds(page.blocks || []) as never,
+          canvasBlocks: safeBlocks as never,
         },
         depth: 0,
         overrideAccess: true,
         req,
-        // Isi template dibuat oleh superadmin, jadi blok AdvancedHTML sah.
-        context: { skipAdvancedHtmlValidation: true },
+        // Hanya dilewati untuk superadmin; untuk user lain blok AdvancedHTML
+        // sudah dibuang di atas sehingga validasi normal tetap berjalan.
+        ...(requesterIsSuperAdmin
+          ? { context: { skipAdvancedHtmlValidation: true } }
+          : {}),
       })
 
       existingKeys.add(key)
@@ -271,9 +290,31 @@ export async function applyTemplateToTenant({
     tenantData.footer = resolvePageSlugs(stripIds(template.footer), slugToID)
   }
 
-  const themeID = relationshipID(template.themePreset)
-  if (themeID && !relationshipID(tenant.themePreset)) {
-    tenantData.themePreset = themeID
+  // Template menyimpan relasi ke Themes, sedangkan tenant menyimpan slug tema
+  // sebagai text. Resolve dulu ke slug agar nilai yang ditulis valid.
+  const themeRef = template.themePreset
+  let themeSlug: string | null = null
+
+  if (themeRef && typeof themeRef === 'object') {
+    themeSlug = themeRef.slug || themeRef.id
+  } else if (themeRef) {
+    try {
+      const theme = (await payload.findByID({
+        collection: 'themes',
+        id: themeRef,
+        depth: 0,
+        overrideAccess: true,
+        req,
+      })) as { slug?: string | null } | null
+      themeSlug = theme?.slug || themeRef
+    } catch {
+      themeSlug = themeRef
+    }
+  }
+
+  const currentTheme = typeof tenant.themePreset === 'string' ? tenant.themePreset : null
+  if (themeSlug && (overwrite || !currentTheme || currentTheme === 'default-theme')) {
+    tenantData.themePreset = themeSlug
   }
 
   if (Object.keys(tenantData).length > 0) {

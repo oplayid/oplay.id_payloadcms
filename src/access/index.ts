@@ -2,24 +2,18 @@ import type { Access, FieldAccess } from 'payload'
 import type { User } from '@/payload-types'
 
 /**
- * Email superadmin tetap didukung agar instalasi lama tidak kehilangan akses
- * saat field `role` baru ditambahkan. Utamakan field `role`.
+ * Superadmin ditentukan HANYA oleh field `role` (tersimpan di JWT).
+ *
+ * Dulu ada fallback berdasarkan `SUPERADMIN_EMAILS`. Itu dihapus karena user
+ * biasa diizinkan mengubah email sendiri — sehingga email dapat dipakai untuk
+ * eskalasi privilege. Untuk memulihkan akses, gunakan script
+ * `pnpm promote:superadmin --email=<email>` (butuh akses DB/CLI).
  */
-function getSuperAdminEmails(): string[] {
-  return (process.env.SUPERADMIN_EMAILS || 'management@oplay.id')
-    .split(',')
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean)
-}
-
 export function isSuperAdmin(user: User | null | undefined | Record<string, unknown>): boolean {
   if (!user) return false
 
   const typed = user as Partial<User>
-  if (typed.role === 'superadmin') return true
-  if (!typed.email) return false
-
-  return getSuperAdminEmails().includes(typed.email.toLowerCase())
+  return typed.role === 'superadmin'
 }
 
 export function getUserTenantIDs(user: User | null | undefined): string[] {

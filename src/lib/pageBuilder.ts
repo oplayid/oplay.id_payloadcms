@@ -123,8 +123,10 @@ async function queryPageForSite({
     limit: 50,
     depth: 2,
     draft: isPreview,
-    // Preview sudah melewati pengecekan user di route /preview.
-    overrideAccess: isPreview,
+    // Preview sudah melewati pengecekan user di route /preview. Untuk public,
+    // overrideAccess dipakai karena access.read koleksi sengaja menolak anonim;
+    // tenant + status sudah difilter eksplisit di `where` di atas.
+    overrideAccess: true,
   })
 
   const expectedPath = normalizePagePath(pagePath)
@@ -150,7 +152,7 @@ async function queryPageForSite({
     limit: 10,
     depth: 2,
     draft: isPreview,
-    overrideAccess: isPreview,
+    overrideAccess: true,
   })
 
   const exact = (bySlug.docs as PageWithMeta[]).find(

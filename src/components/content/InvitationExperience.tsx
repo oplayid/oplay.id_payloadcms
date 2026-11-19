@@ -37,8 +37,10 @@ type Props = {
 
 function readStage(): InvitationStage {
   const state = window.history.state as HistoryState
+  // Hash yang diedit manual (atau dibagikan ulang) harus menang atas state
+  // riwayat, supaya #acara selalu membuka detail dan menghapusnya kembali ke cover.
+  if (window.location.hash) return window.location.hash === DETAIL_HASH ? 'detail' : 'cover'
   if (state?.invitationStage === 'detail') return 'detail'
-  if (window.location.hash === DETAIL_HASH) return 'detail'
   return 'cover'
 }
 

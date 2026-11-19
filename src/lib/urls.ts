@@ -31,7 +31,18 @@ export function normalizeHost(host: string | undefined | null): string {
 }
 
 export function getServerURL(): string {
-  const raw = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
+  /**
+   * `SERVER_URL` adalah variabel SERVER-ONLY yang dibaca saat runtime dan
+   * didahulukan. `NEXT_PUBLIC_SERVER_URL` di-inline saat build, sehingga bila
+   * image di-build tanpa build-arg nilai baking-nya menjadi localhost. Dengan
+   * adanya fallback runtime ini, image yang sama bisa dipakai di host mana pun
+   * cukup dengan mengatur `.env` di Coolify.
+   *
+   * Di bundle client `SERVER_URL` tidak tersedia (undefined) dan fungsi ini
+   * otomatis memakai `NEXT_PUBLIC_SERVER_URL` seperti sebelumnya.
+   */
+  const raw =
+    process.env.SERVER_URL || process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
   return raw.replace(/\/+$/, '')
 }
 

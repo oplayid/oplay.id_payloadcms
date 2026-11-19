@@ -29,6 +29,7 @@ export const RESERVED_SLUGS = new Set([
   'admin',
   'api',
   'app',
+  'anggota',
   'articles',
   'artikel',
   'assets',
@@ -80,6 +81,7 @@ export const RESERVED_SLUGS = new Set([
   'support',
   'tentang',
   'terms',
+  'tim',
   'to',
   'undangan',
   'uploads',
@@ -208,14 +210,13 @@ export function getTenantPrimaryHost(
 ): string | null {
   if (!tenant) return null
 
-  const hosts = (tenant.hosts || []).filter((entry) => entry.host)
-  const primary =
-    hosts.find((entry) => entry.isPrimary && entry.verified !== false) ||
-    hosts.find((entry) => entry.verified !== false) ||
-    hosts[0]
+  // Sama dengan aturan resolusi host: domain belum terverifikasi tidak boleh
+  // dipakai sebagai canonical/share URL.
+  const hosts = (tenant.hosts || []).filter((entry) => entry.host && entry.verified === true)
+  const primary = hosts.find((entry) => entry.isPrimary) || hosts[0]
 
   if (primary?.host) return normalizeHost(primary.host)
-  if (tenant.domain) return normalizeHost(tenant.domain)
+  if (hosts.length > 0 && tenant.domain) return normalizeHost(tenant.domain)
 
   return null
 }
@@ -304,12 +305,35 @@ async function queryTenantByHost(host: string): Promise<TenantWithSiteFields | n
         { status: { not_equals: 'suspended' } },
       ],
     },
-    limit: 1,
+    limit: 10,
     depth: 0,
     overrideAccess: true,
   })
 
-  return (docs[0] as TenantWithSiteFields | undefined) || null
+  /**
+   * Host header dikendalikan klien. Domain baru boleh melayani konten setelah
+   * DNS-nya ditandai terverifikasi oleh superadmin — lihat deskripsi field
+   * `hosts.verified` di Tenants.ts. Filter dilakukan di sini (bukan di query)
+   * agar pasangan host + verified berasal dari entri array yang sama.
+   */
+  const match = (docs as Array<TenantWithSiteFields & {
+    domain?: string | null
+    hosts?: Array<{ host?: string | null; verified?: boolean | null }> | null
+  }>).find((tenant) => {
+    const hosts = Array.isArray(tenant.hosts) ? tenant.hosts : []
+    const hasVerifiedHost = hosts.some((entry) => entry?.verified === true)
+    if (!hasVerifiedHost) return false
+
+    const hostMatches = hosts.some(
+      (entry) => normalizeHost(entry?.host) === host && entry?.verified === true,
+    )
+    if (hostMatches) return true
+
+    // Field `domain` legacy hanya dipakai bila tenant punya host terverifikasi.
+    return normalizeHost(tenant.domain) === host
+  })
+
+  return match || null
 }
 
 async function queryTenantByID(id: string): Promise<TenantWithSiteFields | null> {

@@ -24,6 +24,19 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# next/image SEO/canonical dan callback SSO memakai NEXT_PUBLIC_SERVER_URL yang
+# di-inline saat build. CI mengirim nilai produksi lewat build-arg; default
+# localhost hanya untuk build lokal. Runtime tetap bisa ditimpa lewat
+# SERVER_URL di .env Coolify (lihat lib/urls.ts).
+ARG NEXT_PUBLIC_SERVER_URL=http://localhost:3000
+ENV NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL}
+
+# Dibutuhkan next.config.ts untuk images.remotePatterns. Isi dengan origin R2
+# publik yang sama seperti di .env produksi.
+ARG R2_PUBLIC_URL=https://storage.assets.oplay.id
+ENV R2_PUBLIC_URL=${R2_PUBLIC_URL}
+
 RUN pnpm run build
 
 # Production image, copy all the files and run next
@@ -55,6 +68,11 @@ EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+
+# Health check dipakai Coolify/Traefik untuk mengetahui container siap menerima
+# trafik. Node 22 memiliki fetch global, jadi tidak butuh curl/wget di image.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
 # server.js is created by next build from the standalone output
 # https://nextjs.org/docs/pages/api-reference/next-config-js/output

@@ -1,5 +1,5 @@
 import { APIError, type CollectionConfig } from 'payload'
-import { authenticated } from '@/access'
+import { authenticated, superAdminOnly } from '@/access'
 import { CACHE_TAGS, invalidateContent } from '@/lib/contentCache'
 import { normalizeRedirectTarget } from '@/lib/redirectPath'
 import { normalizePagePath } from '@/lib/urls'
@@ -28,9 +28,12 @@ export const Redirects: CollectionConfig = {
     // Frontend memakai Local API (overrideAccess). Di panel admin, plugin
     // multi-tenant membatasi tenant user ke tenant miliknya.
     read: authenticated,
-    create: authenticated,
-    update: authenticated,
-    delete: authenticated,
+    // Redirect bisa mengarahkan pengguna ke URL lain. Mutasi dibatasi
+    // superadmin di UI admin. Redirect otomatis dari rename halaman tetap
+    // berjalan karena syncRedirectForPathChange memakai overrideAccess: true.
+    create: superAdminOnly,
+    update: superAdminOnly,
+    delete: superAdminOnly,
   },
   hooks: {
     beforeValidate: [

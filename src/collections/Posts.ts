@@ -70,8 +70,9 @@ export const Posts: CollectionConfig = {
     },
   },
   access: {
-    // Publik hanya boleh membaca artikel published (REST/local publik).
-    read: ({ req }) => (req.user ? true : { _status: { equals: 'published' } }),
+    // Publik tidak bisa mengenumerate artikel lewat REST/GraphQL. Renderer
+    // memakai Local API dengan overrideAccess + filter tenant/status sendiri.
+    read: ({ req }) => Boolean(req.user),
     create: authenticated,
     update: authenticated,
     delete: authenticated,

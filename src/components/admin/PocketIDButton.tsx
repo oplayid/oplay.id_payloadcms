@@ -4,16 +4,9 @@ import React from 'react'
 
 export default function PocketIDButton() {
   const handleLogin = () => {
-    const clientId = process.env.NEXT_PUBLIC_OIDC_CLIENT_ID || ''
-    const redirectUri = encodeURIComponent(`${window.location.origin}/api/sso/callback`)
-    const authorizeEndpoint = 'https://apps.oplay.id/authorize'
-
-    // 👇 BUAT STRING ACAK MINIMAL 8 KARAKTER UNTUK PARAMETER 'state'
-    const state =
-      Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-
-    // Arahkan browser dengan menyertakan parameter state
-    window.location.href = `${authorizeEndpoint}?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=openid%20profile%20email&state=${state}`
+    // State + PKCE dibuat di serverRoute /api/sso/start (crypto.randomBytes)
+    // dan divalidasi ulang di callback. Client tidak pernah melihat secret.
+    window.location.href = '/api/sso/start'
   }
 
   return (

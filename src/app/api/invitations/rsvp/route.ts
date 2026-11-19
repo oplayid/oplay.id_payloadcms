@@ -54,7 +54,11 @@ export async function POST(request: Request) {
   const host = request.headers.get('host') || ''
   const ip = clientIPFromHeaders(request.headers)
 
-  if (!consumeRateLimit(`rsvp:${ip}:${key}`, 10, 10 * 60 * 1000)) {
+  // Dua bucket: per-IP (anti rotasi kunci undangan) dan per-undangan.
+  if (
+    !consumeRateLimit(`rsvp:ip:${ip}`, 30, 10 * 60 * 1000) ||
+    !consumeRateLimit(`rsvp:${ip}:${key}`, 10, 10 * 60 * 1000)
+  ) {
     return fail('Terlalu banyak percobaan. Coba lagi beberapa menit lagi.', 429)
   }
 

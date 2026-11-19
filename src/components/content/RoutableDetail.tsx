@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react'
 import type { RoutableContentData } from '@/lib/routableContent'
 import ArticleDetail from './ArticleDetail'
+import MemberDetail from './MemberDetail'
 
 export type RoutableDetailProps = {
   data: RoutableContentData
@@ -14,6 +15,7 @@ export type RoutableDetailProps = {
  */
 const DETAIL_RENDERERS: Record<string, ComponentType<RoutableDetailProps>> = {
   posts: ArticleDetail,
+  members: MemberDetail,
 }
 
 export default function RoutableDetail({ data }: RoutableDetailProps) {

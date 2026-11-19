@@ -1,5 +1,5 @@
 import { Block } from 'payload'
-import { COMPONENT_REGISTRY } from '@/components/componentRegistry'
+import { COMPONENT_REGISTRY_META } from '@/components/componentRegistryMeta'
 import { createDefaultBlock } from './defaultField'
 
 // --- Blok inti / lama ---
@@ -22,6 +22,7 @@ import { mediaCardGridField } from './mediaCardGridField'
 
 // --- Blok bio ---
 import { animatedPhotoBannerField } from './animatedPhotoBannerField'
+import { teamMembersBannerField } from './teamMembersBannerField'
 import { appleVideoScrubField } from './appleVideoScrubField'
 import { appleInteractiveShowcaseField } from './appleInteractiveShowcaseField'
 import { bioProfileField } from './bioProfileField'
@@ -45,6 +46,7 @@ import { galleryLightboxField } from './galleryLightboxField'
 import { accordionDirectoryField } from './accordionDirectoryField'
 import { advancedHtmlField } from './advancedHtmlField'
 import { articleListField } from './articleListField'
+import { memberListField } from './memberListField'
 import { invitationCoverField } from './invitationCoverField'
 import { eventHeroField } from './eventHeroField'
 import { eventDetailsField } from './eventDetailsField'
@@ -52,6 +54,8 @@ import { countdownField } from './countdownField'
 import { invitationGalleryField } from './invitationGalleryField'
 import { rsvpFormField } from './rsvpFormField'
 import { giftInfoField } from './giftInfoField'
+import { eventCountdownField } from './eventCountdownField'
+import { locationMapField } from './locationMapField'
 
 /**
  * Peta kamus form manual untuk setiap tipe komponen di COMPONENT_REGISTRY.
@@ -79,6 +83,7 @@ const customFieldMap: Record<string, Block> = {
 
   // Bio
   AnimatedPhotoBanner: animatedPhotoBannerField,
+  TeamMembersBanner: teamMembersBannerField,
   AppleVideoScrub: appleVideoScrubField,
   AppleInteractiveShowcase: appleInteractiveShowcaseField,
   BioProfile: bioProfileField,
@@ -87,6 +92,7 @@ const customFieldMap: Record<string, Block> = {
 
   // Konten
   ArticleList: articleListField,
+  MemberList: memberListField,
 
   // Undangan
   InvitationCover: invitationCoverField,
@@ -94,6 +100,8 @@ const customFieldMap: Record<string, Block> = {
   EventDetails: eventDetailsField,
   Countdown: countdownField,
   InvitationGallery: invitationGalleryField,
+  EventCountdown: eventCountdownField,
+  LocationMap: locationMapField,
   RsvpForm: rsvpFormField,
   GiftInfo: giftInfoField,
 
@@ -117,11 +125,12 @@ const customFieldMap: Record<string, Block> = {
 
 /**
  * Menghasilkan daftar blok secara otomatis untuk Payload CMS
- * berdasarkan COMPONENT_REGISTRY. Komponen yang belum punya form khusus
- * akan memakai form generik dari createDefaultBlock.
+ * berdasarkan metadata registry (tanpa mengimpor komponen React).
+ * Komponen yang belum punya form khusus akan memakai form generik
+ * dari createDefaultBlock.
  */
 export const getDynamicBlocks = (): Block[] => {
-  return COMPONENT_REGISTRY.map((item) => {
+  return COMPONENT_REGISTRY_META.map((item) => {
     if (customFieldMap[item.type]) {
       return customFieldMap[item.type]
     }

@@ -15,6 +15,7 @@ import { Tenants } from './collections/Tenants'
 import { Templates } from './collections/Templates'
 import { Redirects } from './collections/Redirects'
 import { Posts } from './collections/Posts'
+import { Members } from './collections/Members'
 import { Events } from './collections/Events'
 import { Guests } from './collections/Guests'
 import { seoPlugin } from '@payloadcms/plugin-seo'
@@ -41,7 +42,7 @@ export default buildConfig({
     },
   },
   // 2. Daftarkan koleksi (termasuk Tenants)
-  collections: [Users, Media, Pages, Themes, Tenants, Templates, Redirects, Posts, Events, Guests],
+  collections: [Users, Media, Pages, Themes, Tenants, Templates, Redirects, Posts, Members, Events, Guests],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
 
@@ -77,16 +78,22 @@ export default buildConfig({
   // --- 4. DAFTARKAN SEMUA PLUGIN DI SINI ---
   plugins: [
     seoPlugin({
-      collections: ['pages', 'posts', 'events'],
+      collections: ['pages', 'posts', 'members', 'events'],
       uploadsCollection: 'media',
-      generateTitle: ({ doc }) => (doc?.title ? `${doc.title} — OPLAY.ID` : 'OPLAY.ID'),
+      generateTitle: ({ doc }) => {
+        const label = doc?.title || doc?.name
+        return label ? `${label} — OPLAY.ID` : 'OPLAY.ID'
+      },
       generateDescription: ({ doc }) =>
-        doc?.meta?.description || 'Platform eksekusi bisnis dan legal teknologi.',
+        doc?.meta?.description ||
+        doc?.excerpt ||
+        'Platform eksekusi bisnis dan legal teknologi.',
     }),
     multiTenantPlugin<Config>({
       collections: {
         pages: {},
         posts: {},
+        members: {},
         events: {},
         guests: {},
         media: {},

@@ -509,13 +509,13 @@ export const Tenants: CollectionConfig = {
     },
     {
       name: 'themePreset',
-      type: 'select',
+      type: 'text',
       defaultValue: 'default-theme',
-      options: [
-        { label: 'Default Theme', value: 'default-theme' },
-        { label: 'Cyber Neon', value: 'cyber-neon' },
-        { label: 'Justice Public', value: 'justice-public-theme' },
-      ],
+      label: 'Tema Aktif (slug Theme)',
+      admin: {
+        description:
+          'Isi dengan slug dokumen Themes. Template akan menimpa nilai ini bila opsi overwrite theme dicentang.',
+      },
     },
     {
       name: 'seo',

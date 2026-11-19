@@ -1,5 +1,5 @@
 // src/collections/Users.ts
-import type { CollectionConfig } from 'payload'
+import { APIError, type CollectionConfig } from 'payload'
 import { isSuperAdmin, superAdminFieldOnly, superAdminOnly } from '@/access'
 
 export const Users: CollectionConfig = {
@@ -25,6 +25,25 @@ export const Users: CollectionConfig = {
       return { id: { equals: req.user.id } }
     },
   },
+  hooks: {
+    beforeChange: [
+      ({ data, originalDoc, operation, req }) => {
+        // Email adalah identity field. Member tidak boleh menggantinya sendiri,
+        // karena beberapa proses lama dulu memakai email untuk menentukan role.
+        if (operation === 'update' && req.user && !isSuperAdmin(req.user)) {
+          const nextEmail =
+            typeof data?.email === 'string' ? data.email.trim().toLowerCase() : null
+          const previousEmail =
+            typeof originalDoc?.email === 'string' ? originalDoc.email.toLowerCase() : null
+
+          if (nextEmail && previousEmail && nextEmail !== previousEmail) {
+            throw new APIError('Email tidak dapat diubah sendiri. Hubungi superadmin.', 403)
+          }
+        }
+        return data
+      },
+    ],
+  },
   fields: [
     {
       name: 'role',
@@ -44,6 +63,25 @@ export const Users: CollectionConfig = {
         position: 'sidebar',
         description:
           'Superadmin dapat mengelola semua tenant, domain, dan pengguna. Member hanya mengelola tenant yang di-assign.',
+      },
+    },
+    {
+      /**
+       * Penanda bahwa password akun ini dikelola oleh SSO, bukan oleh pemiliknya.
+       * Callback SSO hanya boleh merotasi password akun bertanda ini — akun
+       * dengan password lokal tidak pernah ditimpa.
+       */
+      name: 'ssoManaged',
+      type: 'checkbox',
+      defaultValue: false,
+      label: 'Akun dikelola SSO',
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        description: 'Dikelola otomatis oleh alur SSO. Jangan diubah manual.',
+      },
+      access: {
+        update: superAdminFieldOnly,
       },
     },
   ],

@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
+import { buildThemeVariables } from '@/lib/themeStyle'
 import type { LayoutMode } from '@/lib/pageBuilder'
 import type { SiteChrome } from '@/lib/siteChrome'
 import type { Locale } from '@/lib/urls'
@@ -14,6 +15,8 @@ type SiteShellProps = {
   basePath: string
   locale: Locale
   isPreview: boolean
+  /** Tema aktif tenant, supaya navbar/footer ikut tema konten. */
+  theme?: Record<string, any>
   children: ReactNode
 }
 
@@ -29,21 +32,27 @@ export default function SiteShell({
   basePath,
   locale,
   isPreview,
+  theme,
   children,
 }: SiteShellProps) {
   const useSiteChrome = layoutMode === 'inherit'
+  const themeStyle = buildThemeVariables(theme) as CSSProperties
 
   return (
     <SiteProvider value={{ basePath, locale }}>
-      {isPreview ? <LivePreviewListener /> : null}
-      {useSiteChrome && chrome.navigation ? (
-        <NavbarBlock data={chrome.navigation} />
-      ) : null}
-      {children}
-      {useSiteChrome && chrome.footer ? (
-        <FooterBlock data={chrome.footer} />
-      ) : null}
-      <CodeInjection css={chrome.codeInjection.css} js={chrome.codeInjection.js} />
+      {/* CanvasRenderer hanya menimpa --theme-* di dalam <main>. Bungkus juga
+          chrome di sini agar navbar/footer memakai tema tenant yang sama. */}
+      <div style={themeStyle} className="contents">
+        {isPreview ? <LivePreviewListener /> : null}
+        {useSiteChrome && chrome.navigation ? (
+          <NavbarBlock data={chrome.navigation} />
+        ) : null}
+        {children}
+        {useSiteChrome && chrome.footer ? (
+          <FooterBlock data={chrome.footer} />
+        ) : null}
+        <CodeInjection css={chrome.codeInjection.css} js={chrome.codeInjection.js} />
+      </div>
     </SiteProvider>
   )
 }

@@ -8,7 +8,10 @@ import { Block } from 'payload'
  */
 export const countdownField: Block = {
   slug: 'Countdown',
-  labels: { singular: 'Hitung Mundur', plural: 'Hitung Mundur' },
+  labels: {
+    singular: 'Hitung Mundur (Undangan)',
+    plural: 'Hitung Mundur (Undangan)',
+  },
   fields: [
     {
       name: 'variant',
@@ -26,6 +29,10 @@ export const countdownField: Block = {
       type: 'text',
       defaultValue: 'Menuju Hari Bahagia',
       label: 'Judul Seksi',
+      admin: {
+        description:
+          'Blok ini hanya tampil di URL tamu /undangan/... dan membaca tanggal dari Events. Untuk halaman biasa, pakai "Hitung Mundur (Umum)".',
+      },
     },
     { name: 'sectionSubtitle', type: 'textarea', label: 'Subjudul Seksi' },
     {

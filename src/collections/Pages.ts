@@ -45,10 +45,10 @@ export const Pages: CollectionConfig = {
     },
   },
   access: {
-    // Publik hanya boleh membaca halaman published. Draft hanya bisa dibaca
-    // lewat /preview yang sudah terautentikasi.
-    read: ({ req }) =>
-      req.user ? true : { _status: { equals: 'published' } },
+    // REST/GraphQL publik TIDAK diberi akses ke koleksi ini. Renderer frontend
+    // memakai Local API dengan overrideAccess + filter tenant/status eksplisit,
+    // sehingga konten tidak bisa di-enumerasi lintas tenant lewat /api/pages.
+    read: ({ req }) => Boolean(req.user),
     create: authenticated,
     update: authenticated,
     delete: authenticated,
@@ -65,14 +65,30 @@ export const Pages: CollectionConfig = {
         if (context?.skipAdvancedHtmlValidation) return data
         if (isSuperAdmin(req.user as User | null)) return data
 
-        const blocks = Array.isArray(data.canvasBlocks)
-          ? data.canvasBlocks
-          : Array.isArray(originalDoc?.canvasBlocks)
-            ? originalDoc.canvasBlocks
-            : []
+        // `canvasBlocks` lokalized: saat locale=all nilainya bisa berupa object
+        // { id: [...], en: [...] }, bukan array. Flatten supaya guard tidak bisa
+        // dilewati hanya dengan mengirim payload multi-locale.
+        const flattenBlocks = (value: unknown): unknown[] => {
+          if (Array.isArray(value)) return value
+          if (value && typeof value === 'object') {
+            return Object.values(value).flatMap((entry) => (Array.isArray(entry) ? entry : []))
+          }
+          return []
+        }
+
+        const blocks = [
+          ...flattenBlocks(data.canvasBlocks),
+          ...flattenBlocks(originalDoc?.canvasBlocks),
+        ]
 
         const usesRawHtml = blocks.some(
-          (block: { blockType?: string | null }) => block?.blockType === 'AdvancedHTML',
+          (block: unknown) =>
+            Boolean(
+              block &&
+                typeof block === 'object' &&
+                'blockType' in block &&
+                (block as { blockType?: unknown }).blockType === 'AdvancedHTML',
+            ),
         )
 
         if (usesRawHtml) {

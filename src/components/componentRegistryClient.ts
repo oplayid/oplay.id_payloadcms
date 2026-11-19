@@ -26,7 +26,7 @@ import LogoCloudBlock from './preset/LogoCloudBlock'
 import InteractiveTabsBlock from './preset/InteractiveTabsBlock'
 import IntegrationGridBlock from './preset/IntegrationGridBlock'
 import ResourceLibraryBlock from './preset/ResourceLibraryBlock'
-import TeamDirectoryBlock from './preset/TeamDirectoryBlock'
+import TeamDirectoryClientBlock from './preset/TeamDirectoryClientBlock'
 import NewsletterCtaBlock from './preset/NewsletterCtaBlock'
 import NotificationBannerBlock from './preset/NotificationBannerBlock'
 import ComparisonSplitBlock from './preset/ComparisonSplitBlock'
@@ -39,11 +39,13 @@ import BioProfileBlock from '@/components/bio/BioProfileBlock'
 import DocumentFlipBlock from '@/components/bio/DocumentFlipBlock'
 import ProfessionalCVBlock from '@/components/bio/ProfessionalCVBlock'
 import AnimatedPhotoBannerBlock from '@/components/bio/AnimatedPhotoBannerBlock'
+import TeamMembersBannerClientBlock from '@/components/bio/TeamMembersBannerClientBlock'
 import AppleInteractiveShowcaseBlock from '@/components/bio/AppleInteractiveShowcaseBlock'
 import AppleVideoScrubBlock from '@/components/bio/AppleVideoScrubBlock'
 import AdvancedHTMLBlock from '@/components/blocks/AdvancedHTMLBlock'
 // Versi client (tanpa fetch server) agar aman dipakai di Live Preview.
 import ArticleListBlockView from './blocks/ArticleListBlockView'
+import MemberListBlockView from './blocks/MemberListBlockView'
 import InvitationCoverBlock from './blocks/invitation/InvitationCoverBlock'
 import EventHeroBlock from './blocks/invitation/EventHeroBlock'
 import EventDetailsBlock from './blocks/invitation/EventDetailsBlock'
@@ -51,6 +53,8 @@ import CountdownBlock from './blocks/invitation/CountdownBlock'
 import InvitationGalleryBlock from './blocks/invitation/InvitationGalleryBlock'
 import RsvpFormBlock from './blocks/invitation/RsvpFormBlock'
 import GiftInfoBlock from './blocks/invitation/GiftInfoBlock'
+import EventCountdownBlock from './blocks/EventCountdownBlock'
+import LocationMapBlock from './blocks/LocationMapBlock'
 
 export type ComponentDefinition = {
   type: string
@@ -275,7 +279,7 @@ export const COMPONENT_REGISTRY: ComponentDefinition[] = [
   {
     type: 'TeamDirectory',
     category: 'People & Organization',
-    component: TeamDirectoryBlock,
+    component: TeamDirectoryClientBlock,
     variants: [
       'team-portrait-grid',
       'team-horizontal-card',
@@ -383,6 +387,12 @@ export const COMPONENT_REGISTRY: ComponentDefinition[] = [
     variants: ['apple-coverflow', 'apple-stack', 'apple-smooth-scroll'],
   },
   {
+    type: 'TeamMembersBanner',
+    category: 'People & Organization',
+    component: TeamMembersBannerClientBlock,
+    variants: ['apple-coverflow', 'apple-stack', 'apple-smooth-scroll'],
+  },
+  {
     type: 'AppleInteractiveShowcase',
     category: 'Visual & Gallery',
     component: AppleInteractiveShowcaseBlock,
@@ -401,6 +411,12 @@ export const COMPONENT_REGISTRY: ComponentDefinition[] = [
     category: 'Content',
     component: ArticleListBlockView,
     variants: ['article-grid', 'article-list', 'article-featured', 'article-compact'],
+  },
+  {
+    type: 'MemberList',
+    category: 'People & Organization',
+    component: MemberListBlockView,
+    variants: ['member-grid', 'member-list', 'member-compact'],
   },
 
   // --- UNDANGAN ---
@@ -427,6 +443,18 @@ export const COMPONENT_REGISTRY: ComponentDefinition[] = [
     category: 'Undangan',
     component: CountdownBlock,
     variants: ['countdown-cards', 'countdown-inline'],
+  },
+  {
+    type: 'EventCountdown',
+    category: 'Umum',
+    component: EventCountdownBlock,
+    variants: ['countdown-cards', 'countdown-inline', 'countdown-minimal'],
+  },
+  {
+    type: 'LocationMap',
+    category: 'Umum',
+    component: LocationMapBlock,
+    variants: ['map-card', 'map-coordinate', 'map-minimal'],
   },
   {
     type: 'InvitationGallery',

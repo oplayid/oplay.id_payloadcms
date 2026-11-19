@@ -88,7 +88,10 @@ export const Templates: CollectionConfig = {
       type: 'relationship',
       relationTo: 'themes',
       label: 'Tema default',
-      admin: { description: 'Diterapkan ke tenant hanya jika tenant belum punya tema.' },
+      admin: {
+        description:
+          'Slug tema yang diterapkan ke tenant. Tanpa overwrite, hanya dipakai bila tenant masih memakai default-theme.',
+      },
     },
     {
       name: 'defaultLayoutMode',

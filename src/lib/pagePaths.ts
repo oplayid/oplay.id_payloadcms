@@ -12,7 +12,11 @@ export function extractPagePath(page: Partial<Page> & { slug?: string | null }):
   const crumbs = Array.isArray(page.breadcrumbs) ? page.breadcrumbs : []
   const last = crumbs[crumbs.length - 1]
   const raw = last && typeof last === 'object' && 'url' in last ? last.url : null
-  let path = normalizePagePath(raw || page.slug || 'home')
+  // Breadcrumbs dari plugin nested-docs bisa berisi URL "undefined" saat slug
+  // induk belum tersedia. Jangan sampai path busuk itu dipakai sebagai redirect.
+  const breadcrumbPath =
+    typeof raw === 'string' && raw.trim() && raw.trim() !== 'undefined' ? raw : null
+  let path = normalizePagePath(breadcrumbPath || page.slug || 'home')
 
   // Data lama memakai /home sebagai root dan /home/anak untuk turunannya.
   path = path.replace(/^\/home(?=\/|$)/, '') || '/'

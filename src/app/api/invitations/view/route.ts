@@ -3,7 +3,7 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import { CACHE_TAGS, invalidateContent } from '@/lib/contentCache'
 import { normalizeInvitationKey } from '@/lib/invitationLink'
-import { findInvitationGuest } from '@/lib/invitations'
+import { loadInvitation } from '@/lib/invitations'
 import { clientIPFromHeaders, consumeRateLimit } from '@/lib/rateLimit'
 
 export const runtime = 'nodejs'
@@ -33,22 +33,28 @@ export async function POST(request: Request) {
   const host = request.headers.get('host') || ''
   const ip = clientIPFromHeaders(request.headers)
 
-  if (!consumeRateLimit(`view:${ip}:${key}`, 30, 60 * 1000)) {
+  // Bucket per-IP menahan rotasi kunci; bucket per-undangan menahan spam
+  // berulang pada satu tamu yang sama.
+  if (
+    !consumeRateLimit(`view:ip:${ip}`, 120, 60 * 1000) ||
+    !consumeRateLimit(`view:${ip}:${key}`, 30, 60 * 1000)
+  ) {
     return NextResponse.json({ ok: false }, { status: 429 })
   }
 
-  const found = await findInvitationGuest({ host, segments, key })
-  if (!found || found.guestDoc.disabled) {
+  // loadInvitation sudah menolak tamu disabled DAN event yang belum published.
+  const invitation = await loadInvitation({ host, segments, key })
+  if (!invitation) {
     return NextResponse.json({ ok: false }, { status: 404 })
   }
 
-  const currentViews = Number(found.guestDoc.viewCount || 0)
+  const currentViews = Number(invitation.guestDoc.viewCount || 0)
 
   try {
     const payload = await getPayload({ config })
     await payload.update({
       collection: 'guests',
-      id: found.guestDoc.id,
+      id: invitation.guestDoc.id,
       data: {
         viewCount: currentViews + 1,
         lastViewedAt: new Date().toISOString(),

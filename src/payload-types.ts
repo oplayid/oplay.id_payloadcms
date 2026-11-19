@@ -75,6 +75,7 @@ export interface Config {
     templates: Template;
     redirects: Redirect;
     posts: Post;
+    members: Member;
     events: Event;
     guests: Guest;
     'payload-kv': PayloadKv;
@@ -92,6 +93,7 @@ export interface Config {
     templates: TemplatesSelect<false> | TemplatesSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
+    members: MembersSelect<false> | MembersSelect<true>;
     events: EventsSelect<false> | EventsSelect<true>;
     guests: GuestsSelect<false> | GuestsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -143,6 +145,10 @@ export interface User {
    * Superadmin dapat mengelola semua tenant, domain, dan pengguna. Member hanya mengelola tenant yang di-assign.
    */
   role: 'member' | 'superadmin';
+  /**
+   * Dikelola otomatis oleh alur SSO. Jangan diubah manual.
+   */
+  ssoManaged?: boolean | null;
   tenants?:
     | {
         tenant: string | Tenant;
@@ -310,7 +316,10 @@ export interface Tenant {
    * URL favicon untuk seluruh halaman tenant ini, contoh /images/favicon.ico atau URL CDN.
    */
   favicon?: string | null;
-  themePreset?: ('default-theme' | 'cyber-neon' | 'justice-public-theme') | null;
+  /**
+   * Isi dengan slug dokumen Themes. Template akan menimpa nilai ini bila opsi overwrite theme dicentang.
+   */
+  themePreset?: string | null;
   seo?: {
     title?: string | null;
     description?: string | null;
@@ -902,6 +911,31 @@ export interface Page {
             sectionBadge?: string | null;
             sectionTitle: string;
             sectionSubtitle?: string | null;
+            /**
+             * Pilih "Sorotan dari Koleksi" untuk menampilkan item dari Anggota/Artikel secara otomatis.
+             */
+            dataSource?: ('manual' | 'collection') | null;
+            highlightCollection?: ('members' | 'posts') | null;
+            highlightMode?: ('latest' | 'manual' | 'category') | null;
+            /**
+             * Urutan tampil mengikuti urutan pilihan.
+             */
+            highlightMemberItems?: (string | Member)[] | null;
+            /**
+             * Urutan tampil mengikuti urutan pilihan.
+             */
+            highlightPostItems?: (string | Post)[] | null;
+            /**
+             * Harus sama persis dengan salah satu kategori/tag pada item koleksi.
+             */
+            highlightCategory?: string | null;
+            /**
+             * Maksimal 48 item per blok (mengikuti batas koleksi).
+             */
+            highlightLimit?: number | null;
+            /**
+             * Dipakai saat sumber data manual. Untuk sorotan otomatis, ubah "Sumber Data" di atas.
+             */
             members?:
               | {
                   name: string;
@@ -1178,6 +1212,45 @@ export interface Page {
             blockType: 'AnimatedPhotoBanner';
           }
         | {
+            variant?: ('apple-coverflow' | 'apple-stack' | 'apple-smooth-scroll') | null;
+            title?: string | null;
+            /**
+             * Pilih "Sorotan dari Koleksi" untuk menampilkan item dari Anggota/Artikel secara otomatis.
+             */
+            dataSource?: ('manual' | 'collection') | null;
+            highlightMode?: ('latest' | 'manual' | 'category') | null;
+            /**
+             * Urutan tampil mengikuti urutan pilihan.
+             */
+            highlightMemberItems?: (string | Member)[] | null;
+            /**
+             * Harus sama persis dengan salah satu kategori/tag pada item koleksi.
+             */
+            highlightCategory?: string | null;
+            /**
+             * Maksimal 48 item per blok (mengikuti batas koleksi).
+             */
+            highlightLimit?: number | null;
+            /**
+             * Dipakai saat sumber data manual. Untuk sorotan otomatis, pilih sumber koleksi di atas.
+             */
+            members?:
+              | {
+                  photo: string | Media;
+                  fullName: string;
+                  position: string;
+                  /**
+                   * Contoh: Aktif, Non-aktif, Pjs, dll.
+                   */
+                  status?: string | null;
+                  id?: string | null;
+                }[]
+              | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'TeamMembersBanner';
+          }
+        | {
             variant?: ('hardware-video' | 'bento-spotlight' | 'sticky-stack' | 'text-reveal') | null;
             title?: string | null;
             subtitle?: string | null;
@@ -1234,6 +1307,34 @@ export interface Page {
             id?: string | null;
             blockName?: string | null;
             blockType: 'ArticleList';
+          }
+        | {
+            variant?: ('member-grid' | 'member-list' | 'member-compact') | null;
+            sectionBadge?: string | null;
+            sectionTitle?: string | null;
+            sectionSubtitle?: string | null;
+            source?: ('latest' | 'manual' | 'category') | null;
+            /**
+             * Urutan tampil mengikuti urutan pilihan.
+             */
+            members?: (string | Member)[] | null;
+            /**
+             * Harus sama persis dengan salah satu kategori pada anggota.
+             */
+            category?: string | null;
+            /**
+             * Maksimal 48 anggota per blok.
+             */
+            limit?: number | null;
+            showPhoto?: boolean | null;
+            showPosition?: boolean | null;
+            showStatus?: boolean | null;
+            showExcerpt?: boolean | null;
+            showCategories?: boolean | null;
+            emptyMessage?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'MemberList';
           }
         | {
             variant?: ('cover-photo' | 'cover-classic' | 'cover-minimal') | null;
@@ -1304,6 +1405,9 @@ export interface Page {
         | {
             variant?: ('countdown-cards' | 'countdown-inline') | null;
             sectionBadge?: string | null;
+            /**
+             * Blok ini hanya tampil di URL tamu /undangan/... dan membaca tanggal dari Events. Untuk halaman biasa, pakai "Hitung Mundur (Umum)".
+             */
             sectionTitle?: string | null;
             sectionSubtitle?: string | null;
             showDate?: boolean | null;
@@ -1312,6 +1416,68 @@ export interface Page {
             id?: string | null;
             blockName?: string | null;
             blockType: 'Countdown';
+          }
+        | {
+            variant?: ('countdown-cards' | 'countdown-inline' | 'countdown-minimal') | null;
+            sectionBadge?: string | null;
+            sectionTitle?: string | null;
+            sectionSubtitle?: string | null;
+            /**
+             * Tanggal DAN jam target. Countdown dihitung absolut dari nilai ini, bukan dari dokumen Events.
+             */
+            targetDate: string;
+            /**
+             * Hanya untuk format tanggal yang ditampilkan, mis. Asia/Jakarta, Asia/Makassar, UTC.
+             */
+            timezone?: string | null;
+            showDate?: boolean | null;
+            showLabels?: boolean | null;
+            finishedLabel?: string | null;
+            note?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'EventCountdown';
+          }
+        | {
+            variant?: ('map-card' | 'map-coordinate' | 'map-minimal') | null;
+            sectionBadge?: string | null;
+            sectionTitle?: string | null;
+            sectionSubtitle?: string | null;
+            /**
+             * Contoh: Gedung Serbaguna Bintaro, Kantor Pusat.
+             */
+            locationName?: string | null;
+            address?: string | null;
+            /**
+             * Contoh: -6.2088. Boleh dikosongkan.
+             */
+            latitude?: number | null;
+            /**
+             * Contoh: 106.8456. Boleh dikosongkan.
+             */
+            longitude?: number | null;
+            showCoordinates?: boolean | null;
+            showGrid?: boolean | null;
+            height?: ('h-64' | 'h-80' | 'h-96') | null;
+            /**
+             * Mode auto memakai URL embed Google Maps/OpenStreetMap tanpa API key. Mode custom menerima URL dari menu Share → Embed milik penyedia peta.
+             */
+            embedMode?: ('none' | 'auto' | 'custom') | null;
+            embedProvider?: ('google' | 'osm') | null;
+            zoom?: number | null;
+            /**
+             * Hanya host peta yang diizinkan. Tambahkan host lain lewat ALLOWED_MAP_EMBED_HOSTS di .env.
+             */
+            customEmbedUrl?: string | null;
+            /**
+             * Bila diisi, tombol pulang ke penyedia peta ditampilkan. Blok ini tetap tidak memanggil API atau memuat peta dari luar.
+             */
+            mapsUrl?: string | null;
+            buttonLabel?: string | null;
+            note?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'LocationMap';
           }
         | {
             variant?: ('gallery-grid' | 'gallery-masonry' | 'gallery-carousel') | null;
@@ -1491,6 +1657,118 @@ export interface Media {
   };
 }
 /**
+ * Profil anggota tampil di URL /anggota/<slug>. Tampilkan di halaman dengan block "Daftar Anggota".
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "members".
+ */
+export interface Member {
+  id: string;
+  tenant?: (string | null) | Tenant;
+  name: string;
+  /**
+   * Dipakai pada URL /anggota/<slug>. Kosongkan untuk dibuat otomatis dari nama.
+   */
+  slug: string;
+  cover?: (string | null) | Media;
+  position?: string | null;
+  /**
+   * Contoh: Aktif, Non-aktif, Pjs, Komisaris, dll.
+   */
+  status?: string | null;
+  /**
+   * Tekan Enter untuk menambah. Dipakai untuk filter pada block "Daftar Anggota".
+   */
+  categories?: string[] | null;
+  /**
+   * Angka lebih kecil tampil lebih dulu.
+   */
+  order?: number | null;
+  /**
+   * Diisi otomatis saat pertama kali dipublikasikan.
+   */
+  publishedAt?: string | null;
+  /**
+   * Tampil di kartu daftar anggota dan sebagai deskripsi singkat bila SEO kosong.
+   */
+  excerpt?: string | null;
+  bio?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  email?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  address?: string | null;
+  socialLinks?:
+    | {
+        /**
+         * Contoh: LinkedIn, Instagram, GitHub.
+         */
+        platform: string;
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  experience?:
+    | {
+        role: string;
+        organization: string;
+        /**
+         * Contoh: 2020–2024, Jan 2022–Sekarang.
+         */
+        period?: string | null;
+        location?: string | null;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  education?:
+    | {
+        institution: string;
+        degree?: string | null;
+        field?: string | null;
+        period?: string | null;
+        description?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Tekan Enter untuk menambah keahlian.
+   */
+  skills?: string[] | null;
+  certifications?:
+    | {
+        name: string;
+        issuer?: string | null;
+        year?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  meta?: {
+    title?: string | null;
+    description?: string | null;
+    /**
+     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
+     */
+    image?: (string | null) | Media;
+  };
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
  * Artikel tampil di URL /artikel/<slug>. Buat halaman daftar dengan blok "Daftar Artikel".
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1574,7 +1852,7 @@ export interface Template {
   description?: string | null;
   previewImage?: (string | null) | Media;
   /**
-   * Diterapkan ke tenant hanya jika tenant belum punya tema.
+   * Slug tema yang diterapkan ke tenant. Tanpa overwrite, hanya dipakai bila tenant masih memakai default-theme.
    */
   themePreset?: (string | null) | Theme;
   /**
@@ -2246,6 +2524,31 @@ export interface Template {
                   sectionBadge?: string | null;
                   sectionTitle: string;
                   sectionSubtitle?: string | null;
+                  /**
+                   * Pilih "Sorotan dari Koleksi" untuk menampilkan item dari Anggota/Artikel secara otomatis.
+                   */
+                  dataSource?: ('manual' | 'collection') | null;
+                  highlightCollection?: ('members' | 'posts') | null;
+                  highlightMode?: ('latest' | 'manual' | 'category') | null;
+                  /**
+                   * Urutan tampil mengikuti urutan pilihan.
+                   */
+                  highlightMemberItems?: (string | Member)[] | null;
+                  /**
+                   * Urutan tampil mengikuti urutan pilihan.
+                   */
+                  highlightPostItems?: (string | Post)[] | null;
+                  /**
+                   * Harus sama persis dengan salah satu kategori/tag pada item koleksi.
+                   */
+                  highlightCategory?: string | null;
+                  /**
+                   * Maksimal 48 item per blok (mengikuti batas koleksi).
+                   */
+                  highlightLimit?: number | null;
+                  /**
+                   * Dipakai saat sumber data manual. Untuk sorotan otomatis, ubah "Sumber Data" di atas.
+                   */
                   members?:
                     | {
                         name: string;
@@ -2522,6 +2825,45 @@ export interface Template {
                   blockType: 'AnimatedPhotoBanner';
                 }
               | {
+                  variant?: ('apple-coverflow' | 'apple-stack' | 'apple-smooth-scroll') | null;
+                  title?: string | null;
+                  /**
+                   * Pilih "Sorotan dari Koleksi" untuk menampilkan item dari Anggota/Artikel secara otomatis.
+                   */
+                  dataSource?: ('manual' | 'collection') | null;
+                  highlightMode?: ('latest' | 'manual' | 'category') | null;
+                  /**
+                   * Urutan tampil mengikuti urutan pilihan.
+                   */
+                  highlightMemberItems?: (string | Member)[] | null;
+                  /**
+                   * Harus sama persis dengan salah satu kategori/tag pada item koleksi.
+                   */
+                  highlightCategory?: string | null;
+                  /**
+                   * Maksimal 48 item per blok (mengikuti batas koleksi).
+                   */
+                  highlightLimit?: number | null;
+                  /**
+                   * Dipakai saat sumber data manual. Untuk sorotan otomatis, pilih sumber koleksi di atas.
+                   */
+                  members?:
+                    | {
+                        photo: string | Media;
+                        fullName: string;
+                        position: string;
+                        /**
+                         * Contoh: Aktif, Non-aktif, Pjs, dll.
+                         */
+                        status?: string | null;
+                        id?: string | null;
+                      }[]
+                    | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'TeamMembersBanner';
+                }
+              | {
                   variant?: ('hardware-video' | 'bento-spotlight' | 'sticky-stack' | 'text-reveal') | null;
                   title?: string | null;
                   subtitle?: string | null;
@@ -2578,6 +2920,34 @@ export interface Template {
                   id?: string | null;
                   blockName?: string | null;
                   blockType: 'ArticleList';
+                }
+              | {
+                  variant?: ('member-grid' | 'member-list' | 'member-compact') | null;
+                  sectionBadge?: string | null;
+                  sectionTitle?: string | null;
+                  sectionSubtitle?: string | null;
+                  source?: ('latest' | 'manual' | 'category') | null;
+                  /**
+                   * Urutan tampil mengikuti urutan pilihan.
+                   */
+                  members?: (string | Member)[] | null;
+                  /**
+                   * Harus sama persis dengan salah satu kategori pada anggota.
+                   */
+                  category?: string | null;
+                  /**
+                   * Maksimal 48 anggota per blok.
+                   */
+                  limit?: number | null;
+                  showPhoto?: boolean | null;
+                  showPosition?: boolean | null;
+                  showStatus?: boolean | null;
+                  showExcerpt?: boolean | null;
+                  showCategories?: boolean | null;
+                  emptyMessage?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'MemberList';
                 }
               | {
                   variant?: ('cover-photo' | 'cover-classic' | 'cover-minimal') | null;
@@ -2648,6 +3018,9 @@ export interface Template {
               | {
                   variant?: ('countdown-cards' | 'countdown-inline') | null;
                   sectionBadge?: string | null;
+                  /**
+                   * Blok ini hanya tampil di URL tamu /undangan/... dan membaca tanggal dari Events. Untuk halaman biasa, pakai "Hitung Mundur (Umum)".
+                   */
                   sectionTitle?: string | null;
                   sectionSubtitle?: string | null;
                   showDate?: boolean | null;
@@ -2656,6 +3029,68 @@ export interface Template {
                   id?: string | null;
                   blockName?: string | null;
                   blockType: 'Countdown';
+                }
+              | {
+                  variant?: ('countdown-cards' | 'countdown-inline' | 'countdown-minimal') | null;
+                  sectionBadge?: string | null;
+                  sectionTitle?: string | null;
+                  sectionSubtitle?: string | null;
+                  /**
+                   * Tanggal DAN jam target. Countdown dihitung absolut dari nilai ini, bukan dari dokumen Events.
+                   */
+                  targetDate: string;
+                  /**
+                   * Hanya untuk format tanggal yang ditampilkan, mis. Asia/Jakarta, Asia/Makassar, UTC.
+                   */
+                  timezone?: string | null;
+                  showDate?: boolean | null;
+                  showLabels?: boolean | null;
+                  finishedLabel?: string | null;
+                  note?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'EventCountdown';
+                }
+              | {
+                  variant?: ('map-card' | 'map-coordinate' | 'map-minimal') | null;
+                  sectionBadge?: string | null;
+                  sectionTitle?: string | null;
+                  sectionSubtitle?: string | null;
+                  /**
+                   * Contoh: Gedung Serbaguna Bintaro, Kantor Pusat.
+                   */
+                  locationName?: string | null;
+                  address?: string | null;
+                  /**
+                   * Contoh: -6.2088. Boleh dikosongkan.
+                   */
+                  latitude?: number | null;
+                  /**
+                   * Contoh: 106.8456. Boleh dikosongkan.
+                   */
+                  longitude?: number | null;
+                  showCoordinates?: boolean | null;
+                  showGrid?: boolean | null;
+                  height?: ('h-64' | 'h-80' | 'h-96') | null;
+                  /**
+                   * Mode auto memakai URL embed Google Maps/OpenStreetMap tanpa API key. Mode custom menerima URL dari menu Share → Embed milik penyedia peta.
+                   */
+                  embedMode?: ('none' | 'auto' | 'custom') | null;
+                  embedProvider?: ('google' | 'osm') | null;
+                  zoom?: number | null;
+                  /**
+                   * Hanya host peta yang diizinkan. Tambahkan host lain lewat ALLOWED_MAP_EMBED_HOSTS di .env.
+                   */
+                  customEmbedUrl?: string | null;
+                  /**
+                   * Bila diisi, tombol pulang ke penyedia peta ditampilkan. Blok ini tetap tidak memanggil API atau memuat peta dari luar.
+                   */
+                  mapsUrl?: string | null;
+                  buttonLabel?: string | null;
+                  note?: string | null;
+                  id?: string | null;
+                  blockName?: string | null;
+                  blockType: 'LocationMap';
                 }
               | {
                   variant?: ('gallery-grid' | 'gallery-masonry' | 'gallery-carousel') | null;
@@ -2994,6 +3429,10 @@ export interface PayloadLockedDocument {
         value: string | Post;
       } | null)
     | ({
+        relationTo: 'members';
+        value: string | Member;
+      } | null)
+    | ({
         relationTo: 'events';
         value: string | Event;
       } | null)
@@ -3049,6 +3488,7 @@ export interface PayloadMigration {
  */
 export interface UsersSelect<T extends boolean = true> {
   role?: T;
+  ssoManaged?: T;
   tenants?:
     | T
     | {
@@ -3640,6 +4080,13 @@ export interface PagesSelect<T extends boolean = true> {
               sectionBadge?: T;
               sectionTitle?: T;
               sectionSubtitle?: T;
+              dataSource?: T;
+              highlightCollection?: T;
+              highlightMode?: T;
+              highlightMemberItems?: T;
+              highlightPostItems?: T;
+              highlightCategory?: T;
+              highlightLimit?: T;
               members?:
                 | T
                 | {
@@ -3856,6 +4303,28 @@ export interface PagesSelect<T extends boolean = true> {
               id?: T;
               blockName?: T;
             };
+        TeamMembersBanner?:
+          | T
+          | {
+              variant?: T;
+              title?: T;
+              dataSource?: T;
+              highlightMode?: T;
+              highlightMemberItems?: T;
+              highlightCategory?: T;
+              highlightLimit?: T;
+              members?:
+                | T
+                | {
+                    photo?: T;
+                    fullName?: T;
+                    position?: T;
+                    status?: T;
+                    id?: T;
+                  };
+              id?: T;
+              blockName?: T;
+            };
         AppleInteractiveShowcase?:
           | T
           | {
@@ -3904,6 +4373,26 @@ export interface PagesSelect<T extends boolean = true> {
               showCover?: T;
               showExcerpt?: T;
               showDate?: T;
+              emptyMessage?: T;
+              id?: T;
+              blockName?: T;
+            };
+        MemberList?:
+          | T
+          | {
+              variant?: T;
+              sectionBadge?: T;
+              sectionTitle?: T;
+              sectionSubtitle?: T;
+              source?: T;
+              members?: T;
+              category?: T;
+              limit?: T;
+              showPhoto?: T;
+              showPosition?: T;
+              showStatus?: T;
+              showExcerpt?: T;
+              showCategories?: T;
               emptyMessage?: T;
               id?: T;
               blockName?: T;
@@ -3977,6 +4466,46 @@ export interface PagesSelect<T extends boolean = true> {
               sectionSubtitle?: T;
               showDate?: T;
               finishedLabel?: T;
+              note?: T;
+              id?: T;
+              blockName?: T;
+            };
+        EventCountdown?:
+          | T
+          | {
+              variant?: T;
+              sectionBadge?: T;
+              sectionTitle?: T;
+              sectionSubtitle?: T;
+              targetDate?: T;
+              timezone?: T;
+              showDate?: T;
+              showLabels?: T;
+              finishedLabel?: T;
+              note?: T;
+              id?: T;
+              blockName?: T;
+            };
+        LocationMap?:
+          | T
+          | {
+              variant?: T;
+              sectionBadge?: T;
+              sectionTitle?: T;
+              sectionSubtitle?: T;
+              locationName?: T;
+              address?: T;
+              latitude?: T;
+              longitude?: T;
+              showCoordinates?: T;
+              showGrid?: T;
+              height?: T;
+              embedMode?: T;
+              embedProvider?: T;
+              zoom?: T;
+              customEmbedUrl?: T;
+              mapsUrl?: T;
+              buttonLabel?: T;
               note?: T;
               id?: T;
               blockName?: T;
@@ -4750,6 +5279,13 @@ export interface TemplatesSelect<T extends boolean = true> {
                     sectionBadge?: T;
                     sectionTitle?: T;
                     sectionSubtitle?: T;
+                    dataSource?: T;
+                    highlightCollection?: T;
+                    highlightMode?: T;
+                    highlightMemberItems?: T;
+                    highlightPostItems?: T;
+                    highlightCategory?: T;
+                    highlightLimit?: T;
                     members?:
                       | T
                       | {
@@ -4966,6 +5502,28 @@ export interface TemplatesSelect<T extends boolean = true> {
                     id?: T;
                     blockName?: T;
                   };
+              TeamMembersBanner?:
+                | T
+                | {
+                    variant?: T;
+                    title?: T;
+                    dataSource?: T;
+                    highlightMode?: T;
+                    highlightMemberItems?: T;
+                    highlightCategory?: T;
+                    highlightLimit?: T;
+                    members?:
+                      | T
+                      | {
+                          photo?: T;
+                          fullName?: T;
+                          position?: T;
+                          status?: T;
+                          id?: T;
+                        };
+                    id?: T;
+                    blockName?: T;
+                  };
               AppleInteractiveShowcase?:
                 | T
                 | {
@@ -5014,6 +5572,26 @@ export interface TemplatesSelect<T extends boolean = true> {
                     showCover?: T;
                     showExcerpt?: T;
                     showDate?: T;
+                    emptyMessage?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              MemberList?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    source?: T;
+                    members?: T;
+                    category?: T;
+                    limit?: T;
+                    showPhoto?: T;
+                    showPosition?: T;
+                    showStatus?: T;
+                    showExcerpt?: T;
+                    showCategories?: T;
                     emptyMessage?: T;
                     id?: T;
                     blockName?: T;
@@ -5087,6 +5665,46 @@ export interface TemplatesSelect<T extends boolean = true> {
                     sectionSubtitle?: T;
                     showDate?: T;
                     finishedLabel?: T;
+                    note?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              EventCountdown?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    targetDate?: T;
+                    timezone?: T;
+                    showDate?: T;
+                    showLabels?: T;
+                    finishedLabel?: T;
+                    note?: T;
+                    id?: T;
+                    blockName?: T;
+                  };
+              LocationMap?:
+                | T
+                | {
+                    variant?: T;
+                    sectionBadge?: T;
+                    sectionTitle?: T;
+                    sectionSubtitle?: T;
+                    locationName?: T;
+                    address?: T;
+                    latitude?: T;
+                    longitude?: T;
+                    showCoordinates?: T;
+                    showGrid?: T;
+                    height?: T;
+                    embedMode?: T;
+                    embedProvider?: T;
+                    zoom?: T;
+                    customEmbedUrl?: T;
+                    mapsUrl?: T;
+                    buttonLabel?: T;
                     note?: T;
                     id?: T;
                     blockName?: T;
@@ -5185,6 +5803,73 @@ export interface PostsSelect<T extends boolean = true> {
   cover?: T;
   categories?: T;
   content?: T;
+  meta?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "members_select".
+ */
+export interface MembersSelect<T extends boolean = true> {
+  tenant?: T;
+  name?: T;
+  slug?: T;
+  cover?: T;
+  position?: T;
+  status?: T;
+  categories?: T;
+  order?: T;
+  publishedAt?: T;
+  excerpt?: T;
+  bio?: T;
+  email?: T;
+  phone?: T;
+  website?: T;
+  address?: T;
+  socialLinks?:
+    | T
+    | {
+        platform?: T;
+        url?: T;
+        id?: T;
+      };
+  experience?:
+    | T
+    | {
+        role?: T;
+        organization?: T;
+        period?: T;
+        location?: T;
+        description?: T;
+        id?: T;
+      };
+  education?:
+    | T
+    | {
+        institution?: T;
+        degree?: T;
+        field?: T;
+        period?: T;
+        description?: T;
+        id?: T;
+      };
+  skills?: T;
+  certifications?:
+    | T
+    | {
+        name?: T;
+        issuer?: T;
+        year?: T;
+        id?: T;
+      };
   meta?:
     | T
     | {

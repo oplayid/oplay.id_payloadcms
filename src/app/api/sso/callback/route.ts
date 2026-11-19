@@ -1,116 +1,169 @@
 // src/app/api/sso/callback/route.ts
+import { randomBytes, timingSafeEqual } from 'node:crypto'
+import { cookies } from 'next/headers'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { NextResponse } from 'next/server'
+import { getServerURL } from '@/lib/urls'
+
+export const dynamic = 'force-dynamic'
+
+function getIssuer(): string {
+  return (process.env.OIDC_URI || 'https://apps.oplay.id').replace(/\/+$/, '')
+}
+
+function errorRedirect(code: string): NextResponse {
+  const response = NextResponse.redirect(
+    new URL(`/admin/login?error=${code}`, getServerURL()),
+  )
+  response.cookies.delete('sso_state')
+  response.cookies.delete('sso_verifier')
+  return response
+}
+
+/** Perbandingan state yang tahan timing attack. */
+function statesMatch(a: string, b: string): boolean {
+  const left = Buffer.from(a)
+  const right = Buffer.from(b)
+  if (left.length !== right.length) return false
+  return timingSafeEqual(left, right)
+}
 
 export async function GET(req: Request) {
   const url = new URL(req.url)
   const code = url.searchParams.get('code')
-  const baseUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
-  const issuer = process.env.OIDC_URI || 'https://apps.oplay.id'
+  const state = url.searchParams.get('state')
 
-  if (!code) {
-    return NextResponse.redirect(new URL('/admin/login?error=NoCode', baseUrl))
-  }
+  if (!code || !state) return errorRedirect('NoCode')
+
+  const cookieStore = await cookies()
+  const savedState = cookieStore.get('sso_state')?.value
+  const codeVerifier = cookieStore.get('sso_verifier')?.value
+
+  // Validasi state: tanpa ini siapa pun bisa memaksa login dengan code miliknya.
+  if (!savedState || !statesMatch(state, savedState)) return errorRedirect('InvalidState')
+  if (!codeVerifier) return errorRedirect('MissingVerifier')
+
+  const issuer = getIssuer()
+  const baseUrl = getServerURL()
+  const clientId = process.env.NEXT_PUBLIC_OIDC_CLIENT_ID || process.env.OIDC_CLIENT_ID || ''
+  const clientSecret = process.env.OIDC_CLIENT_SECRET || ''
 
   try {
-    const tokenEndpoint = `${issuer}/api/oidc/token`
-    const userInfoEndpoint = `${issuer}/api/oidc/userinfo`
-
-    // 1. Tukar 'code' dengan Token
-    const tokenRes = await fetch(tokenEndpoint, {
+    // 1. Tukar authorization code memakai PKCE verifier.
+    const tokenRes = await fetch(`${issuer}/api/oidc/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         grant_type: 'authorization_code',
-        client_id: process.env.NEXT_PUBLIC_OIDC_CLIENT_ID || process.env.OIDC_CLIENT_ID || '',
-        client_secret: process.env.OIDC_CLIENT_SECRET || '',
+        client_id: clientId,
+        client_secret: clientSecret,
         redirect_uri: `${baseUrl}/api/sso/callback`,
         code,
+        code_verifier: codeVerifier,
       }),
     })
 
+    if (!tokenRes.ok) return errorRedirect('TokenExchangeFailed')
     const tokens = await tokenRes.json()
-    if (!tokens.access_token) throw new Error('Gagal mendapatkan access token')
+    if (!tokens.access_token) return errorRedirect('TokenExchangeFailed')
 
-    // 2. Ambil profil user (email) dari UserInfo
-    const userInfoRes = await fetch(userInfoEndpoint, {
+    // 2. Ambil identitas dari UserInfo.
+    const userInfoRes = await fetch(`${issuer}/api/oidc/userinfo`, {
       headers: { Authorization: `Bearer ${tokens.access_token}` },
     })
+    if (!userInfoRes.ok) return errorRedirect('UserInfoFailed')
+
     const userInfo = await userInfoRes.json()
-    const email = userInfo.email
+    const email =
+      typeof userInfo.email === 'string' ? userInfo.email.trim().toLowerCase() : ''
+    if (!email || !email.includes('@')) return errorRedirect('NoEmail')
 
-    if (!email) throw new Error('Email tidak ditemukan dari profil Pocket ID')
-
-    // 3. Inisialisasi Payload Local API
+    // 3. Cari / buat user. Kunci SSO adalah `ssoManaged`.
     const payload = await getPayload({ config })
-
-    // 4. Cari atau Buat User di Koleksi 'Users'
-    const existingUsers = await payload.find({
+    const found = await payload.find({
       collection: 'users',
       where: { email: { equals: email } },
       limit: 1,
+      overrideAccess: true,
     })
 
-    let user = existingUsers.docs[0]
-    const dummyPassword = Math.random().toString(36).slice(-8) + 'Ab1!'
+    const existing = found.docs[0] as
+      | { id: string; ssoManaged?: boolean | null }
+      | undefined
 
-    if (!user) {
-      user = await payload.create({
-        collection: 'users',
-        data: {
-          email: email,
-          password: dummyPassword,
-          role: 'member',
-        },
-      })
+    // Akun dengan password lokal TIDAK boleh diadopsi diam-diam: itu akan
+    // memungkinkan siapa pun yang menguasai email IdP mengambil alih akun.
+    if (
+      existing &&
+      !existing.ssoManaged &&
+      process.env.SSO_ADOPT_EXISTING !== 'true'
+    ) {
+      return errorRedirect('SSOAccountExists')
     }
 
-    // 5. 🔑 GENERATE SESSION COOKIE MENGGUNAKAN PAYLOAD LOGIN
-    let loginResult
+    // Password acak kriptografis diputar TIAP login SSO hanya untuk akun yang
+    // memang dikelola SSO. Akun lokal tidak pernah disentuh.
+    const ssoPassword = `${randomBytes(24).toString('base64url')}Ab1!`
 
-    try {
-      loginResult = await payload.login({
+    if (!existing) {
+      // Akun SSO baru adalah member. Tanpa tenant, access control multi-tenant
+      // membuatnya tidak bisa melihat apa pun. Beri akses ke tenant platform
+      // agar alur login langsung usable; superadmin bisa menambah tenant lain.
+      const defaultTenantSlug = process.env.PLATFORM_TENANT_SLUG || 'oplay'
+      const tenantResult = await payload.find({
+        collection: 'tenants',
+        where: { slug: { equals: defaultTenantSlug } },
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      })
+      const defaultTenantID = tenantResult.docs[0]?.id
+
+      await payload.create({
         collection: 'users',
         data: {
-          email: email,
-          password: dummyPassword,
+          email,
+          password: ssoPassword,
+          role: 'member',
+          ssoManaged: true,
+          ...(defaultTenantID
+            ? { tenants: [{ tenant: defaultTenantID }] }
+            : {}),
         },
+        overrideAccess: true,
       })
-    } catch (loginErr) {
-      // Jika password lama berbeda, update paksa ke dummyPassword agar bisa login via SSO
+    } else {
       await payload.update({
         collection: 'users',
-        id: user.id,
-        data: { password: dummyPassword },
-      })
-
-      loginResult = await payload.login({
-        collection: 'users',
-        data: {
-          email: email,
-          password: dummyPassword,
-        },
+        id: existing.id,
+        data: { password: ssoPassword, ssoManaged: true },
+        overrideAccess: true,
       })
     }
 
-    // 6. Redirect ke /admin dengan membawa Cookie Sesi dari Payload
+    // 4. Login untuk mendapatkan token sesi Payload.
+    const loginResult = await payload.login({
+      collection: 'users',
+      data: { email, password: ssoPassword },
+    })
+
+    if (!loginResult.token) return errorRedirect('SSOFailed')
+
     const response = NextResponse.redirect(new URL('/admin', baseUrl))
-
-    if (loginResult && loginResult.token) {
-      response.cookies.set({
-        name: 'payload-token',
-        value: loginResult.token,
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        path: '/',
-        sameSite: 'lax',
-      })
-    }
-
+    response.cookies.set({
+      name: 'payload-token',
+      value: loginResult.token,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      sameSite: 'lax',
+    })
+    response.cookies.delete('sso_state')
+    response.cookies.delete('sso_verifier')
     return response
-  } catch (err: any) {
-    console.error('Pocket ID Callback Exception:', err.message || err)
-    return NextResponse.redirect(new URL('/admin/login?error=SSOFailed', baseUrl))
+  } catch (err) {
+    console.error('SSO callback gagal:', err instanceof Error ? err.message : err)
+    return errorRedirect('SSOFailed')
   }
 }

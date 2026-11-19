@@ -39,10 +39,12 @@ import BioProfileBlock from '@/components/bio/BioProfileBlock'
 import DocumentFlipBlock from '@/components/bio/DocumentFlipBlock'
 import ProfessionalCVBlock from '@/components/bio/ProfessionalCVBlock'
 import AnimatedPhotoBannerBlock from '@/components/bio/AnimatedPhotoBannerBlock'
+import TeamMembersBannerBlock from '@/components/bio/TeamMembersBannerBlock'
 import AppleInteractiveShowcaseBlock from '@/components/bio/AppleInteractiveShowcaseBlock'
 import AppleVideoScrubBlock from '@/components/bio/AppleVideoScrubBlock'
 import AdvancedHTMLBlock from '@/components/blocks/AdvancedHTMLBlock'
 import ArticleListBlock from './blocks/ArticleListBlock'
+import MemberListBlock from './blocks/MemberListBlock'
 import InvitationCoverBlock from './blocks/invitation/InvitationCoverBlock'
 import EventHeroBlock from './blocks/invitation/EventHeroBlock'
 import EventDetailsBlock from './blocks/invitation/EventDetailsBlock'
@@ -50,6 +52,8 @@ import CountdownBlock from './blocks/invitation/CountdownBlock'
 import InvitationGalleryBlock from './blocks/invitation/InvitationGalleryBlock'
 import RsvpFormBlock from './blocks/invitation/RsvpFormBlock'
 import GiftInfoBlock from './blocks/invitation/GiftInfoBlock'
+import EventCountdownBlock from './blocks/EventCountdownBlock'
+import LocationMapBlock from './blocks/LocationMapBlock'
 
 export type ComponentDefinition = {
   type: string
@@ -377,6 +381,12 @@ export const COMPONENT_REGISTRY: ComponentDefinition[] = [
     variants: ['apple-coverflow', 'apple-stack', 'apple-smooth-scroll'],
   },
   {
+    type: 'TeamMembersBanner',
+    category: 'People & Organization',
+    component: TeamMembersBannerBlock,
+    variants: ['apple-coverflow', 'apple-stack', 'apple-smooth-scroll'],
+  },
+  {
     type: 'AppleInteractiveShowcase',
     category: 'Visual & Gallery',
     component: AppleInteractiveShowcaseBlock,
@@ -400,6 +410,12 @@ export const COMPONENT_REGISTRY: ComponentDefinition[] = [
       'article-featured',
       'article-compact',
     ],
+  },
+  {
+    type: 'MemberList',
+    category: 'People & Organization',
+    component: MemberListBlock,
+    variants: ['member-grid', 'member-list', 'member-compact'],
   },
 
   // --- UNDANGAN ---
@@ -426,6 +442,18 @@ export const COMPONENT_REGISTRY: ComponentDefinition[] = [
     category: 'Undangan',
     component: CountdownBlock,
     variants: ['countdown-cards', 'countdown-inline'],
+  },
+  {
+    type: 'EventCountdown',
+    category: 'Umum',
+    component: EventCountdownBlock,
+    variants: ['countdown-cards', 'countdown-inline', 'countdown-minimal'],
+  },
+  {
+    type: 'LocationMap',
+    category: 'Umum',
+    component: LocationMapBlock,
+    variants: ['map-card', 'map-coordinate', 'map-minimal'],
   },
   {
     type: 'InvitationGallery',

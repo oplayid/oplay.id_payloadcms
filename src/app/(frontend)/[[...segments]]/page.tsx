@@ -189,6 +189,7 @@ export default async function UniversalPage({ params }: Props) {
         basePath={resolved.data.basePath}
         locale={resolved.data.locale}
         isPreview={resolved.data.isPreview}
+        theme={resolved.data.theme}
       >
         <InvitationDetail data={resolved.data} />
       </SiteShell>
@@ -203,6 +204,7 @@ export default async function UniversalPage({ params }: Props) {
         basePath={resolved.data.basePath}
         locale={resolved.data.locale}
         isPreview={resolved.data.isPreview}
+        theme={resolved.data.theme}
       >
         <RoutableDetail data={resolved.data} />
       </SiteShell>
@@ -224,6 +226,7 @@ export default async function UniversalPage({ params }: Props) {
       basePath={data.basePath}
       locale={data.locale}
       isPreview={data.isPreview}
+      theme={data.theme}
     >
       <CanvasRenderer layoutData={data} components={getComponentRegistryMap()} />
     </SiteShell>

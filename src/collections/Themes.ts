@@ -1,4 +1,5 @@
 import { CollectionConfig } from 'payload'
+import { superAdminOnly } from '@/access'
 import { CACHE_TAGS, invalidateContent } from '@/lib/contentCache'
 
 export const Themes: CollectionConfig = {
@@ -9,6 +10,11 @@ export const Themes: CollectionConfig = {
   },
   access: {
     read: () => true,
+    // Tema dipakai bersama semua tenant. Mutasi hanya superadmin supaya member
+    // tenant mana pun tidak bisa merusak theme milik tenant lain.
+    create: superAdminOnly,
+    update: superAdminOnly,
+    delete: superAdminOnly,
   },
   hooks: {
     afterChange: [

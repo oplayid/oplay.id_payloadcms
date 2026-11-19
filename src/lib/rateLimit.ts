@@ -51,12 +51,29 @@ export function consumeRateLimit(key: string, limit: number, windowMs: number): 
   return true
 }
 
-/** IP klien dari header proxy (Coolify/Traefik) atau koneksi langsung. */
+/**
+ * IP klien dari header proxy tepercaya.
+ *
+ * `x-forwarded-for` mudah dipalsukan oleh klien bila proxy hanya menambahkan
+ * (bukan menimpa) header. Secara default kami memakai header yang DISET proxy
+ * (`x-real-ip` pada Traefik/Coolify, `cf-connecting-ip` pada Cloudflare).
+ * `x-forwarded-for` hanya dipakai bila `TRUST_X_FORWARDED_FOR=true` dan proxy
+ * dikonfigurasi untuk menimpanya.
+ */
 export function clientIPFromHeaders(headers: Headers): string {
-  const forwarded = headers.get('x-forwarded-for')
-  if (forwarded) {
-    const first = forwarded.split(',')[0]?.trim()
-    if (first) return first
+  const realIP = headers.get('x-real-ip')?.trim()
+  if (realIP) return realIP
+
+  const cloudflareIP = headers.get('cf-connecting-ip')?.trim()
+  if (cloudflareIP) return cloudflareIP
+
+  if (process.env.TRUST_X_FORWARDED_FOR === 'true') {
+    const forwarded = headers.get('x-forwarded-for')
+    if (forwarded) {
+      const first = forwarded.split(',')[0]?.trim()
+      if (first) return first
+    }
   }
-  return headers.get('x-real-ip') || headers.get('cf-connecting-ip') || 'unknown'
+
+  return 'unknown'
 }

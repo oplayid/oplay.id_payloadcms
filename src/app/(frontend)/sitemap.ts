@@ -59,6 +59,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = []
 
   for (const site of sites) {
+    // Selaraskan dengan metadata halaman: tenant yang noindex tidak boleh
+    // tetap mempublikasikan URL-nya di sitemap.
+    const tenantSEO = (site.tenant as Tenant & { seo?: { noIndex?: boolean | null } | null }).seo
+    if (tenantSEO?.noIndex) continue
+
     const pages = await payload.find({
       collection: 'pages',
       where: {
@@ -73,6 +78,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
 
     for (const page of pages.docs as Page[]) {
+      if ((page as Page & { seo?: { noIndex?: boolean | null } | null }).seo?.noIndex) continue
+
       const pagePath = extractPagePath(page)
       const idURL = `${origin}${localizePath(pagePath, site.basePath, 'id')}`.replace(/\/$/, '')
       const enURL = `${origin}${localizePath(pagePath, site.basePath, 'en')}`.replace(/\/$/, '')
@@ -109,6 +116,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       })
 
       for (const doc of docs.docs as Array<Record<string, unknown>>) {
+        const docSEO = doc.seo as { noIndex?: boolean | null } | null | undefined
+        if (docSEO?.noIndex) continue
+
         const slug = doc[config.slugField]
         if (typeof slug !== 'string' || !slug) continue
 

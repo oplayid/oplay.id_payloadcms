@@ -2,6 +2,7 @@ import { APIError, type PayloadRequest, type Where } from 'payload'
 import type { User } from '@/payload-types'
 import { userHasTenantAccess } from '@/access'
 import { CACHE_TAGS, invalidateContent } from '@/lib/contentCache'
+import { withTransaction } from '@/lib/transactions'
 import {
   GUEST_IMPORT_IMPORT_BATCH,
   GUEST_IMPORT_PREVIEW_BATCH,
@@ -284,6 +285,9 @@ export async function guestImportEndpoint(req: PayloadRequest): Promise<Response
 
   const results: RowResult[] = []
 
+  // Satu batch impor harus atomik: bila ada baris gagal, transaksi dibatalkan
+  // sehingga tidak ada tamu setengah masuk (penting untuk MongoDB replika).
+  await withTransaction(req, async () => {
   for (const item of items) {
     if (!item.valid) {
       results.push({ line: item.line, status: 'failed', error: item.error })
@@ -383,6 +387,15 @@ export async function guestImportEndpoint(req: PayloadRequest): Promise<Response
       results.push({ line: item.line, status: 'failed', name: item.data.name, error: errorMessage(error) })
     }
   }
+
+    const failed = results.find((result) => result.status === 'failed')
+    if (failed) {
+      throw new APIError(
+        `Impor dibatalkan: baris ${failed.line} gagal (${failed.error || 'kesalahan tidak diketahui'}). Tidak ada perubahan yang disimpan.`,
+        400,
+      )
+    }
+  })
 
   if (results.some((result) => result.status === 'created' || result.status === 'updated')) {
     await invalidateContent([CACHE_TAGS.invitations])
