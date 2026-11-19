@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { userHasTenantAccess } from '@/access'
-import { getServerURL, isLocale } from '@/lib/urls'
+import { getPlatformHost, getServerURL, isLocale } from '@/lib/urls'
 import type { User } from '@/payload-types'
 
 function safeRedirectPath(value: string | null): string | null {
@@ -11,6 +11,27 @@ function safeRedirectPath(value: string | null): string | null {
   if (!value.startsWith('/') || value.startsWith('//')) return null
   if (value.includes('\\')) return null
   return value
+}
+
+/**
+ * Origin kanonik untuk redirect preview.
+ *
+ * `url.origin` dari NextRequest mengikuti header X-Forwarded-Host/Proto, sehingga
+ * di belakang reverse proxy bisa berisi alamat internal (mis. https://0.0.0.0:3000).
+ * Memakainya sebagai base redirect membuat iframe preview gagal connect.
+ */
+function previewOrigin(fallback: string): string {
+  const candidates = [getServerURL(), `https://${getPlatformHost()}`]
+
+  for (const candidate of candidates) {
+    try {
+      return new URL(candidate).origin
+    } catch {
+      // Coba kandidat berikutnya.
+    }
+  }
+
+  return fallback
 }
 
 /**
@@ -48,9 +69,9 @@ export async function GET(req: NextRequest): Promise<Response> {
   const draft = await draftMode()
   draft.enable()
 
-  // Tetap di origin request agar cookie draftMode yang diaktifkan di atas ikut
-  // terbawa pada redirect (lintas host akan menggugurkan cookie).
-  const target = new URL(path, url.origin)
+  // Redirect ke origin kanonik platform, bukan `url.origin` yang bisa tercemar
+  // header proxy. Cookie draftMode di-set pada origin ini, jadi tetap same-origin.
+  const target = new URL(path, previewOrigin(url.origin))
 
   // `buildPreviewURL` sudah menyertakan locale pada path publik. Sertakan juga
   // sebagai query agar handler penerima bisa membacanya bila diperlukan.
